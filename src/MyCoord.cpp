@@ -22,6 +22,7 @@
 #include "MyCoord.h"
 
 
+
 const MyCoord MyCoord::NIL = MyCoord(NaN, NaN, NaN);
 const MyCoord MyCoord::ZERO = MyCoord(0.0, 0.0, 0.0);
 const MyCoord MyCoord::X_AXIS = MyCoord(1.0, 0.0, 0.0);
