@@ -42,8 +42,8 @@ double weightFunciont (MyCoord p1, MyCoord p2) {
 	double ris;
 	//cout << "weightFunciont - p1: " << p1 << "; p2: " << p2 << endl; fflush(stdout);
 
-	ris = ( 1.0 / pow((p1.distance(p2)), 2.0) );
-	//ris = ( 1.0 / p1.distance(p2) );
+	//ris = ( 1.0 / pow((p1.distance(p2)), 2.0) );
+	ris = ( 1.0 / p1.distance(p2) );
 	//ris = ( 1.0 / pow((p1.distance(p2)), 0.5) );
 	//ris = ( 1.0 / pow((p1.distance(p2)), 0.2) );
 
@@ -78,13 +78,16 @@ private:
 
 class CoordCluster{
 public:
-	CoordCluster (){ }
+	CoordCluster (){ clusterID = -1; algo3freeze = false;}
 	CoordCluster (std::list<MyCoord> &pl){
 		//for (std::list<MyCoord>::iterator it = pl.begin(); it != pl.end(); it++) {
 		for (auto& cc : pl) {
 			MyCoord newPos = MyCoord(cc.x, cc.y);
 			pointsList.push_back(newPos);
 		}
+
+		clusterID = -1;
+		algo3freeze = false;
 	}
 
 	void printCluter(void) {
@@ -117,6 +120,22 @@ public:
 
 	double getMaxCorrelation(void) {
 		double ris = 0;
+		for (auto& it1 : pointsList) {
+		//for (auto it1 = pointsList.begin(); it1 != pointsList.end(); it1++){
+			for (auto& it2 : pointsList) {
+			//for (auto it2 = it1; it2 != pointsList.end(); it2++){
+				if (it1 != it2) {
+					//double corr = weightFunciont(*it1, *it2);
+					double corr = weightFunciont(it1, it2);
+					if (corr > ris) ris = corr;
+				}
+			}
+		}
+		return ris;
+	}
+
+	/*double getMaxCorrelation(void) {
+		double ris = 0;
 		for (auto it1 = pointsList.begin(); it1 != pointsList.end(); it1++){
 			for (auto it2 = it1; it2 != pointsList.end(); it2++){
 				if (it1 != it2) {
@@ -126,7 +145,7 @@ public:
 			}
 		}
 		return ris;
-	}
+	}*/
 
 	double getAvgCorrelation(void) {
 		double ris = 0;
@@ -180,9 +199,86 @@ public:
 	}
 
 public:
-	std::list<MyCoord> pointsList;
+	//std::list<MyCoord> pointsList;
+	std::vector<MyCoord> pointsList;
 	MyCoord clusterHead;
+	int clusterID;
+	bool algo3freeze;
 };
+
+double calculateFullMoranIndex(std::vector<CoordCluster> &cv){
+	double xMM = (((double) cv.size()) - 1.0) / 2.0;
+
+	double sumUp = 0;
+	double sumDown = 0;
+	double sumW = 0;
+	double pCount = 0;
+	//for (auto& cc1 : cv) {
+	for (unsigned int i1 = 0; i1 < cv.size(); i1++) {
+		CoordCluster *cc1 = &(cv[i1]);
+		for (auto& pp1 : cc1->pointsList){
+
+			//for (auto& cc2 : cv) {
+			for (unsigned int i2 = 0; i2 < cv.size(); i2++) {
+				CoordCluster *cc2 = &(cv[i2]);
+				for (auto& pp2 : cc2->pointsList){
+
+					double small_w = 0;
+					if (pp1 != pp2) {
+						small_w = weightFunciont(pp1, pp2);
+					}
+					sumW += small_w;
+
+					//sumUp += small_w * (pp1.distance(cc1->clusterHead)) * (pp2.distance(cc2->clusterHead));
+					sumUp += small_w * (i1 - xMM) * (i2 - xMM);
+				}
+			}
+
+			//sumDown += pow(pp1.distance(cc1->clusterHead), 2.0);
+			sumDown += pow(i1 - xMM, 2.0);
+			pCount += 1.0;
+		}
+	}
+
+	return ( (pCount / sumW) * (sumUp / sumDown) );
+}
+
+double calculateFullMoranIndex_const(std::vector<CoordCluster> &cv){
+	double z = 1;
+
+	double sumUp = 0;
+	double sumDown = 0;
+	double sumW = 0;
+	double pCount = 0;
+	//for (auto& cc1 : cv) {
+	for (unsigned int i1 = 0; i1 < cv.size(); i1++) {
+		CoordCluster *cc1 = &(cv[i1]);
+		for (auto& pp1 : cc1->pointsList){
+
+			//for (auto& cc2 : cv) {
+			for (unsigned int i2 = 0; i2 < cv.size(); i2++) {
+				CoordCluster *cc2 = &(cv[i2]);
+				for (auto& pp2 : cc2->pointsList){
+
+					double small_w = 0;
+					if (pp1 != pp2) {
+						small_w = weightFunciont(pp1, pp2);
+					}
+					sumW += small_w;
+
+					//sumUp += small_w * (pp1.distance(cc1->clusterHead)) * (pp2.distance(cc2->clusterHead));
+					sumUp += small_w * (z) * (z);
+				}
+			}
+
+			//sumDown += pow(pp1.distance(cc1->clusterHead), 2.0);
+			sumDown += pow(z, 2.0);
+			pCount += 1.0;
+		}
+	}
+
+	return ( (pCount / sumW) * (sumUp / sumDown) );
+}
 
 double getClusterMaxCorrelation(CoordCluster &cc, MyCoord coord, bool inclusive) {
 	double ris = 0;
@@ -283,6 +379,34 @@ void generateOutputRandomPoints(std::string fn, int ni, int ss) {
 
 }
 
+void generateOutputRandomGridPoints(std::string fn, int ni, int ss) {
+	std::ofstream fout(fn, std::ofstream::out);
+
+	if (fout.is_open()) {
+
+		int remainingP = ni;
+
+		int sq = sqrt((double) ni);
+		if ((sq*sq) < ni) ++sq;
+
+		double iterDist = ((double) ss) / ((double) sq);
+
+		for (int i = 0; i < sq; ++i) {
+			for (int j = 0; j < sq; ++j) {
+				if (remainingP > 0) {
+
+					fout << (iterDist * i) << ";" << (iterDist * j) << endl;
+
+					--remainingP;
+				}
+			}
+		}
+
+		fout.close();
+	}
+
+}
+
 
 void generateRandomPoints(std::list<MyCoord> &pl, int ss) {
 	for (int i : boost::irange(0,100)) { // i goes from 0 to 99 inclusive
@@ -318,8 +442,10 @@ void importPoints(std::string inputFileName, std::list<MyCoord> &pl) {
 void getAndRemoveMaxTillL (int l, MyCoord &vi, std::vector<CoordCluster> &cv) {
 	double maxW = -1;
 	int clusterMaxIndex = -1;
+	std::vector<MyCoord>::iterator maxIT;
 
 	for (int j=0; j<=l; j++){
+		if (cv[j].algo3freeze) continue;
 		for (auto it = cv[j].pointsList.begin(); it != cv[j].pointsList.end(); it++){
 			MyCoord vt = *it;
 			if (vt != cv[j].clusterHead) {
@@ -329,6 +455,7 @@ void getAndRemoveMaxTillL (int l, MyCoord &vi, std::vector<CoordCluster> &cv) {
 				if (actW > maxW) {
 					vi = vt;
 					clusterMaxIndex = j;
+					maxIT = it;
 				}
 			}
 		}
@@ -338,15 +465,23 @@ void getAndRemoveMaxTillL (int l, MyCoord &vi, std::vector<CoordCluster> &cv) {
 		cerr << "Error choosing next ch" << endl;
 	}
 	else {
-		cv[clusterMaxIndex].pointsList.remove(vi);
+		//cv[clusterMaxIndex].pointsList.remove(vi);
+		cv[clusterMaxIndex].pointsList.erase(maxIT);
 	}
 }
 
-void printAllCluters(std::vector<CoordCluster> &cv, const char *msg) {
+void printAllCluters(std::vector<CoordCluster> &cv, const char *msg, bool printPoints) {
 	cout << msg << "  CLUSTERS: " << endl;
 	for (auto& cc : cv){
-		cout << "||| ";
-		cc.printCluter();
+		cout << "|| " << cc.clusterID <<
+				" | " << cc.algo3freeze <<
+				" | " << cc.pointsList.size() <<
+				" | " << cc.getMaxCorrelation();
+
+		if (printPoints) {
+			cout << " | ";
+			cc.printCluter();
+		}
 		cout << endl;
 	}
 }
@@ -381,6 +516,7 @@ void k_2MMalgo(std::vector<CoordCluster> &cv, int k, int iterations) {
 
 	for (int l=0; l<(k-1); l++){
 		MyCoord vi;
+
 		getAndRemoveMaxTillL(l, vi, cv);
 
 		cv[l+1].pointsList.push_back(vi);
@@ -393,6 +529,7 @@ void k_2MMalgo(std::vector<CoordCluster> &cv, int k, int iterations) {
 		// add other points
 		for (int j=0; j<=l; j++){
 			//for (auto& vt : cv[j].pointsList){
+
 			bool erased;
 			do {
 				erased = false;
@@ -410,7 +547,8 @@ void k_2MMalgo(std::vector<CoordCluster> &cv, int k, int iterations) {
 							cv[l+1].pointsList.push_back(MyCoord(vt.x, vt.y));
 							//cv[j].pointsList.erase(it);
 
-							cv[j].pointsList.remove(vt);
+							//cv[j].pointsList.remove(vt);
+							cv[j].pointsList.erase(it);
 
 							erased = true;
 							break;
@@ -431,14 +569,17 @@ void k_2MMalgo(std::vector<CoordCluster> &cv, int k, int iterations) {
 
 		//shuffle
 		//for (int ss=0; ss<k; ss++){
-		//	std::random_shuffle(cv[ss].pointsList.begin(), cv[ss].pointsList.end());
-		//}
+		for (auto& ss : cv){
+			//std::random_shuffle(cv[ss].pointsList.begin(), cv[ss].pointsList.end());
+			std::random_shuffle(ss.pointsList.begin(), ss.pointsList.end());
+		}
 
 		//go back
 		for (int l=(k-1); l>0; l--){
 
 			for (int j=(k-1); j>=l; j--){
 				//for (auto& vt : cv[j].pointsList){
+
 				bool erased;
 				do {
 					erased = false;
@@ -470,12 +611,13 @@ void k_2MMalgo(std::vector<CoordCluster> &cv, int k, int iterations) {
 								//cv[j].pointsList.erase(it);
 
 								//cv[j].pointsList.remove(vt);
-								it = cv[j].pointsList.erase(it);
+								cv[j].pointsList.erase(it);
+								//it = cv[j].pointsList.erase(it);
 
 								movingSomeone = true;
 
-								//erased = true;
-								//break;
+								erased = true;
+								break;
 							}
 						}
 					}
@@ -518,12 +660,13 @@ void k_2MMalgo(std::vector<CoordCluster> &cv, int k, int iterations) {
 								//cv[j].pointsList.erase(it);
 
 								//cv[j].pointsList.remove(vt);
-								it = cv[j].pointsList.erase(it);
+								cv[j].pointsList.erase(it);
+								//it = cv[j].pointsList.erase(it);
 
 								movingSomeone = true;
 
-								//erased = true;
-								//break;
+								erased = true;
+								break;
 							}
 						}
 					}
@@ -534,11 +677,221 @@ void k_2MMalgo(std::vector<CoordCluster> &cv, int k, int iterations) {
 		//double actW = getSystemMaxCorrelation(cv);
 		//if (actW == systemW) {
 		if (!movingSomeone) {
-			cout << "Stopping at the " << round << " iteration" << endl;
+			//cout << "Stopping at the " << round << " iteration" << endl;
 			break;
 		}
 		//systemW = actW;
 	}
+	//printAllCluters(cv, "FINAL CLUSTERS");
+}
+
+void k_2MMalgo3(std::vector<CoordCluster> &cv, int k, int iterations) {
+	for (int l=0; l<(k-1); l++){
+		MyCoord vi;
+
+		if (cv[l].algo3freeze) continue;
+
+		int nextIdx = -1;
+		for (int kk = (l+1); kk < k; kk++) {
+			if (!cv[kk].algo3freeze) {
+				nextIdx = kk;
+				break;
+			}
+		}
+		if (nextIdx < 0) continue;
+
+
+		getAndRemoveMaxTillL(l, vi, cv);
+
+		cv[nextIdx].pointsList.push_back(vi);
+		cv[nextIdx].clusterHead = vi;
+
+		//printAllCluters(cv, "New CH");
+
+		//cout << "k_2MMalgo - New Cluster head: " << vi << ". round l: " << l << endl; fflush(stdout);
+
+		// add other points
+		for (int j=0; j<=l; j++){
+			//for (auto& vt : cv[j].pointsList){
+			if (cv[j].algo3freeze) continue;
+
+			bool erased;
+			do {
+				erased = false;
+				for (auto it = cv[j].pointsList.begin(); it != cv[j].pointsList.end(); it++){
+					MyCoord vt = *it;
+					if (vt != cv[j].clusterHead) {
+					//if (cv[j].pointsList.size() >1) {
+						double wHere = weightCoordCluster(vt, cv, j, ALGOVERSION);
+						double wThere = weightCoordCluster(vt, cv, nextIdx, ALGOVERSION);
+						//double wHere = weightCoordCluster(vt, cv[j], ALGOVERSION);
+						//double wThere = weightCoordCluster(vt, cv[l+1], ALGOVERSION);
+						//if ( weightFunciont(vt, cv[j].clusterHead) >= weightFunciont(vt, vi)) {
+						if ( wHere >= wThere) {  // ANGELO new
+							//move vt to the new cluster
+							cv[nextIdx].pointsList.push_back(MyCoord(vt.x, vt.y));
+							//cv[j].pointsList.erase(it);
+
+							//cv[j].pointsList.remove(vt);
+							cv[j].pointsList.erase(it);
+
+							erased = true;
+							break;
+						}
+					}
+				}
+			} while(erased);
+		}
+
+		//printAllCluters(cv, "END CICLE");
+	}
+
+	//double systemW = getSystemMaxCorrelation(cv);
+
+	for (int round = 0; round < iterations; round++) {
+
+		bool movingSomeone = false;
+
+		//shuffle
+		//for (int ss=0; ss<k; ss++){
+		for (auto& ss : cv){
+			//std::random_shuffle(cv[ss].pointsList.begin(), cv[ss].pointsList.end());
+			std::random_shuffle(ss.pointsList.begin(), ss.pointsList.end());
+		}
+
+		//go back
+		for (int l=(k-1); l>0; l--){
+
+			if (cv[l].algo3freeze) continue;
+
+			int nextIdx = -1;
+			for (int kk = (l-1); kk >= 0; kk--) {
+				if (!cv[kk].algo3freeze) {
+					nextIdx = kk;
+					break;
+				}
+			}
+			if (nextIdx < 0) continue;
+
+			for (int j=(k-1); j>=l; j--){
+				//for (auto& vt : cv[j].pointsList){
+				if (cv[j].algo3freeze) continue;
+
+				bool erased;
+				do {
+					erased = false;
+					for (auto it = cv[j].pointsList.begin(); it != cv[j].pointsList.end(); it++){
+						MyCoord vt = *it;
+						//if (vt != cv[j].clusterHead) {
+						if (cv[j].pointsList.size() > 1) {
+							//int idxThere = l-1;
+							//double wHere = weightCoordCluster(vt, cv, j, ALGOVERSION);
+							//double wThere = 1;
+							//double wHere = weightCoordCluster(vt, cv[j], ALGOVERSION);
+							//double wThere = weightCoordCluster(vt, cv[l-1], ALGOVERSION);
+							double wHere = weightCoordCluster(vt, cv, j, ALGOVERSION);
+							double wThere = weightCoordCluster(vt, cv, nextIdx, ALGOVERSION);
+							//for (int jj = 0; jj < k; jj++) {
+							//	if (jj != j) {
+							//		double wJ = weightCoordCluster(vt, cv, jj, ALGOVERSION);
+							//		if (wJ < wThere) {
+							//			wThere = wJ;
+							//			idxThere = jj;
+							//		}
+							//	}
+							//}
+							//if ( weightFunciont(vt, cv[j].clusterHead) >= weightFunciont(vt, vi)) {
+							if ( wHere >= wThere) {  // ANGELO new
+								//move vt to the new cluster
+								cv[nextIdx].pointsList.push_back(MyCoord(vt.x, vt.y));
+								//cv[idxThere].pointsList.push_back(MyCoord(vt.x, vt.y));
+								//cv[j].pointsList.erase(it);
+
+								//cv[j].pointsList.remove(vt);
+								cv[j].pointsList.erase(it);
+								//it = cv[j].pointsList.erase(it);
+
+								movingSomeone = true;
+
+								erased = true;
+								break;
+							}
+						}
+					}
+				} while(erased);
+			}
+		}
+
+		//go ahead
+		for (int l=0; l<(k-1); l++){
+			if (cv[l].algo3freeze) continue;
+
+			int nextIdx = -1;
+			for (int kk = (l+1); kk < k; kk++) {
+				if (!cv[kk].algo3freeze) {
+					nextIdx = kk;
+					break;
+				}
+			}
+			if (nextIdx < 0) continue;
+
+			for (int j=0; j<=l; j++){
+				if (cv[j].algo3freeze) continue;
+				//for (auto& vt : cv[j].pointsList){
+				bool erased;
+				do {
+					erased = false;
+					for (auto it = cv[j].pointsList.begin(); it != cv[j].pointsList.end(); it++){
+						MyCoord vt = *it;
+						if (cv[j].pointsList.size() > 1) {
+						//if (vt != cv[j].clusterHead) {
+							double wHere = weightCoordCluster(vt, cv, j, ALGOVERSION);
+							double wThere = weightCoordCluster(vt, cv, nextIdx, ALGOVERSION);
+							//int idxThere = l-1;
+							//double wHere = weightCoordCluster(vt, cv, j, ALGOVERSION);
+							//double wThere = 1;
+							//double wHere = weightCoordCluster(vt, cv[j], ALGOVERSION);
+							//double wThere = weightCoordCluster(vt, cv[l+1], ALGOVERSION);
+							//for (int jj = 0; jj < k; jj++) {
+							//	if (jj != j) {
+							//		double wJ = weightCoordCluster(vt, cv, jj, ALGOVERSION);
+							//		if (wJ < wThere) {
+							//			wThere = wJ;
+							//			idxThere = jj;
+							//		}
+							//	}
+							//}
+							//if ( weightFunciont(vt, cv[j].clusterHead) >= weightFunciont(vt, vi)) {
+							if ( wHere >= wThere) {  // ANGELO new
+								//move vt to the new cluster
+								cv[nextIdx].pointsList.push_back(MyCoord(vt.x, vt.y));
+								//cv[idxThere].pointsList.push_back(MyCoord(vt.x, vt.y));
+								//cv[j].pointsList.erase(it);
+
+								//cv[j].pointsList.remove(vt);
+								cv[j].pointsList.erase(it);
+								//it = cv[j].pointsList.erase(it);
+
+								movingSomeone = true;
+
+								erased = true;
+								break;
+							}
+						}
+					}
+				} while(erased);
+			}
+		}
+
+		//double actW = getSystemMaxCorrelation(cv);
+		//if (actW == systemW) {
+		if (!movingSomeone) {
+			//cout << "Stopping at the " << round << " iteration" << endl;
+			break;
+		}
+		//systemW = actW;
+	}
+	//printAllCluters(cv, "FINAL CLUSTERS");
 }
 
 void generateDOTfile(std::string outFileName, std::vector<CoordCluster> &clustVec, double pSize){
@@ -572,12 +925,225 @@ void generateDOTfile(std::string outFileName, std::vector<CoordCluster> &clustVe
 	}
 }
 
+//void k_2MMalgo(std::vector<CoordCluster> &cv, int k, int iterations) {
+void equalize1(std::vector<CoordCluster> &cv, int pointsNumber, int k) {
+	int n4cluster = pointsNumber / k;
+	//int remainingP = pointsNumber % k;
+
+	//cout << "Equalizing1 the " << k << " clusters; " << n4cluster << " each; remaining points: " << remainingP << endl;
+
+	bool removed;
+	do {
+		removed = false;
+		for (unsigned int idx1 = 0; idx1 < cv.size(); idx1++) {
+			if (((int) cv[idx1].pointsList.size()) < n4cluster) {
+				double corrMinGlob = std::numeric_limits<double>::max();
+				unsigned int clustMin = 0;
+				std::vector<MyCoord>::iterator itMinGlob;
+
+				for (unsigned int idx2 = 0; idx2 < cv.size(); idx2++) {
+					if (idx1 != idx2) {
+						if (((int) cv[idx2].pointsList.size()) > n4cluster) {
+							std::vector<MyCoord>::iterator itMinLoc;
+							double corrMinLoc = std::numeric_limits<double>::max();
+
+							for (auto itP2 = cv[idx2].pointsList.begin(); itP2 != cv[idx2].pointsList.end(); itP2++) {
+								//for (auto& pp : cv[idx2].pointsList) {
+								for (auto itP1 = cv[idx1].pointsList.begin(); itP1 != cv[idx1].pointsList.end(); itP1++) {
+									double corr = weightFunciont(*itP1, *itP2);
+									if (corr < corrMinLoc) {
+										corrMinLoc = corr;
+										itMinLoc = itP2;
+									}
+								}
+							}
+
+							if (corrMinLoc < corrMinGlob) {
+								corrMinGlob = corrMinLoc;
+								itMinGlob = itMinLoc;
+								clustMin = idx2;
+							}
+						}
+					}
+				}
+
+				if (corrMinGlob < std::numeric_limits<double>::max()) {
+					cv[idx1].pointsList.push_back(MyCoord(itMinGlob->x, itMinGlob->y));
+
+					cv[clustMin].pointsList.erase(itMinGlob);
+
+					removed = true;
+					break;
+				}
+				else {
+					cerr << "Error in equalizing the clusters" << endl;
+					exit(EXIT_FAILURE);
+				}
+			}
+		}
+	} while (removed);
+}
+
+void equalize2(std::vector<CoordCluster> &cv, int pointsNumber, int k) {
+	int n4cluster = pointsNumber / k;
+	//int remainingP = pointsNumber % k;
+
+	//cout << "Equalizing2 the " << k << " clusters; " << n4cluster << " each; remaining points: " << remainingP << endl;
+
+	bool removed;
+	do {
+
+		double corrMinGlob = std::numeric_limits<double>::max();
+		unsigned int clustMinSrc = 0;
+		unsigned int clustMinDst = 0;
+		std::vector<MyCoord>::iterator itMinGlobSrc;
+
+		removed = false;
+		for (unsigned int idx1 = 0; idx1 < cv.size(); idx1++) {
+			if (((int) cv[idx1].pointsList.size()) < n4cluster) {
+				for (unsigned int idx2 = 0; idx2 < cv.size(); idx2++) {
+					if (idx1 != idx2) {
+						if (((int) cv[idx2].pointsList.size()) > n4cluster) {
+							for (auto itP2 = cv[idx2].pointsList.begin(); itP2 != cv[idx2].pointsList.end(); itP2++) {
+								//for (auto& pp : cv[idx2].pointsList) {
+								for (auto itP1 = cv[idx1].pointsList.begin(); itP1 != cv[idx1].pointsList.end(); itP1++) {
+									double corr = weightFunciont(*itP1, *itP2);
+
+									if (corr < corrMinGlob) {
+										corrMinGlob = corr;
+
+										clustMinDst = idx1;
+										clustMinSrc = idx2;
+
+										itMinGlobSrc = itP2;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+
+		if (corrMinGlob < std::numeric_limits<double>::max()) {
+			cv[clustMinDst].pointsList.push_back(MyCoord(itMinGlobSrc->x, itMinGlobSrc->y));
+
+			cv[clustMinSrc].pointsList.erase(itMinGlobSrc);
+
+			removed = true;
+		}
+		/*else {
+			cerr << "Error in equalizing the clusters" << endl;
+			exit(EXIT_FAILURE);
+		}*/
+
+	} while (removed);
+}
+
+void equalize3(std::vector<CoordCluster> &cv, int pointsNumber, int k, unsigned int n4cluster, int remainingP) {
+	//int n4cluster = pointsNumber / k;
+	//int remainingP = pointsNumber % k;
+	unsigned int minClusterSize = n4cluster;
+	if (remainingP > 0) {
+		++minClusterSize;
+	}
+
+	//cout << "Equalizing3 the " << k << " clusters; " << n4cluster << " each; remaining points: " << remainingP << endl;
+
+	unsigned int minSize = std::numeric_limits<unsigned int>::max();
+	unsigned int idxActCluster;
+	for (unsigned int idxC = 0; idxC < cv.size(); ++idxC) {
+		if (!cv[idxC].algo3freeze) {
+			if ((cv[idxC].pointsList.size() >= minClusterSize) && (cv[idxC].pointsList.size() < minSize)) {
+				idxActCluster = idxC;
+				minSize = cv[idxC].pointsList.size();
+			}
+		}
+	}
+
+	if (minSize != std::numeric_limits<int>::max()){
+		cv[idxActCluster].algo3freeze = true;
+
+		if (minSize > minClusterSize) {
+			unsigned int destClust;
+
+			for (unsigned int idxC = 0; idxC < cv.size(); ++idxC) {
+				if (!cv[idxC].algo3freeze) {
+					destClust = idxC;
+					break;
+				}
+			}
+
+			do {
+
+				std::vector<MyCoord>::iterator itRemove;
+				double minCorrToRemove = std::numeric_limits<double>::max();
+
+				for (auto pp = cv[idxActCluster].pointsList.begin(); pp != cv[idxActCluster].pointsList.end(); pp++) {
+					//for (auto& pp : cv[idxActCluster].pointsList) {
+
+					for (auto& cc : cv) {
+						if (!cc.algo3freeze) {
+							for (auto ppCheck = cc.pointsList.begin(); ppCheck != cc.pointsList.end(); ppCheck++) {
+								//for (auto& ppCheck : cc.pointsList) {
+								double corr = weightFunciont(*pp, *ppCheck);
+								if (corr < minCorrToRemove) {
+									minCorrToRemove = corr;
+									itRemove = pp;
+								}
+							}
+						}
+					}
+				}
+
+				if (minCorrToRemove != std::numeric_limits<double>::max()) {
+					cv[destClust].pointsList.push_back(MyCoord(itRemove->x, itRemove->y));
+
+					cv[idxActCluster].pointsList.erase(itRemove);
+				}
+				else {
+					cerr << "Error in Equalizing3" << endl;
+					exit(EXIT_FAILURE);
+				}
+
+			} while(cv[idxActCluster].pointsList.size() > minClusterSize);
+
+		}
+	}
+}
+
+bool allEqualized3(std::vector<CoordCluster> &cv) {
+	bool ris = true;
+
+	for (auto& c : cv) {
+		if (!c.algo3freeze) {
+			ris = false;
+		}
+	}
+
+	return ris;
+}
+
+int numNotEqualized3(std::vector<CoordCluster> &cv) {
+	int ris = 0;
+
+	for (auto& c : cv) {
+		if (!c.algo3freeze) {
+			ris++;
+		}
+	}
+
+	return ris;
+}
+
 int main(int argc, char **argv) {
 	std::list<MyCoord> pointsList;
 	std::vector<CoordCluster> clustersVec;
 	int k = 5;
 	int scenarioSize = 100;
 	int iterationNum = 10;
+	int equalize_t = 1;
 
 	cout << "Begin!!!" << endl;
 
@@ -592,6 +1158,8 @@ int main(int argc, char **argv) {
 	const std::string &kValue = input.getCmdOption("-k");
 	const std::string &scenarioMaxVal = input.getCmdOption("-s");
 	const std::string &iterationNumber = input.getCmdOption("-i");
+	const std::string &equalizeType = input.getCmdOption("-e");
+	const std::string &randomGenerationType = input.getCmdOption("-r");
 
 	if (!iterationNumber.empty()) {
 		iterationNum = atoi(iterationNumber.c_str());
@@ -605,7 +1173,31 @@ int main(int argc, char **argv) {
 
 	if ( (!outputGenerateFileName.empty()) && (!numberOfItemToGenerate.empty()) ) {
 		int nItems = atoi(numberOfItemToGenerate.c_str());
-		generateOutputRandomPoints(outputGenerateFileName, nItems, scenarioSize);
+		int randomType = 0; //0: random; 1: grid
+
+		if (!randomGenerationType.empty()) {
+			int rt = atoi(randomGenerationType.c_str());
+			switch (rt) {
+			default:
+			case 0:
+				randomType = 0;
+				break;
+			case 1:
+				randomType = 1;
+				break;
+			}
+		}
+		switch (randomType) {
+		default:
+		case 0:
+			generateOutputRandomPoints(outputGenerateFileName, nItems, scenarioSize);
+			break;
+
+		case 1:
+			generateOutputRandomGridPoints(outputGenerateFileName, nItems, scenarioSize);
+			break;
+		}
+		//generateOutputRandomPoints(outputGenerateFileName, nItems, scenarioSize);
 	}
 
 	if (inputFileName.empty()) {
@@ -613,6 +1205,14 @@ int main(int argc, char **argv) {
 	}
 	else {
 		importPoints(inputFileName, pointsList);
+	}
+
+	if (!equalizeType.empty()) {
+		equalize_t = atoi(equalizeType.c_str());
+		if ((equalize_t < 1) || (equalize_t > 3)) {
+			cerr << "Wrong equalyze type [1..3]" << endl;
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	clustersVec.resize(k);
@@ -627,9 +1227,52 @@ int main(int argc, char **argv) {
 	clustersVec[0] = CoordCluster(pointsList);
 	clustersVec[0].chooseFirstClusterHead();
 
-	//cout << "Start k_2MMalgo" << endl; fflush(stdout);
-	k_2MMalgo(clustersVec, k, iterationNum);
-	//cout << "End k_2MMalgo" << endl; fflush(stdout);
+	int idd = 0;
+	for (auto& ccc : clustersVec) {
+		ccc.clusterID = idd++;
+	}
+
+	if (equalize_t < 3) {
+		//cout << "Start k_2MMalgo" << endl; fflush(stdout);
+		k_2MMalgo(clustersVec, k, iterationNum);
+		//cout << "End k_2MMalgo" << endl; fflush(stdout);
+
+		//cout << "Start equalizer" << endl; fflush(stdout);
+		if (equalize_t == 1) {
+			equalize1(clustersVec, pointsList.size(), k);
+		}
+		else {
+			equalize2(clustersVec, pointsList.size(), k);
+		}
+		//cout << "End equalizer" << endl; fflush(stdout);
+	}
+	else if (equalize_t == 3) {
+		//while (!allEqualized3(clustersVec)) {
+		unsigned int n4cluster = ((unsigned int) pointsList.size()) / k;
+		int remainingP = ((int) pointsList.size()) % k;
+
+		do {
+			//cout << "Start k_2MMalgo" << endl; fflush(stdout);
+			k_2MMalgo3(clustersVec, k, iterationNum);
+			//cout << "End k_2MMalgo" << endl; fflush(stdout);
+
+			//printAllCluters(clustersVec, "BEFORE EQUALIZER", false);
+
+			//cout << "Start equalizer" << endl; fflush(stdout);
+			equalize3(clustersVec, pointsList.size(), k, n4cluster, remainingP);
+			if (remainingP > 0) {
+				--remainingP;
+			}
+			//for (auto& c : clustersVec) { c.algo3freeze = true; }
+			//cout << "End equalizer" << endl; fflush(stdout);
+
+			//printAllCluters(clustersVec, "AFTER EQUALIZER", false);
+
+			if (numNotEqualized3(clustersVec) <= 1) {
+				break;
+			}
+		} while (true);
+	}
 
 	int sumElements = 0;
 	//double maxCorrelation = 0;
@@ -638,7 +1281,7 @@ int main(int argc, char **argv) {
 		//double actMaxCorrelation = cv.getMaxCorrelation();
 		//double actAvgCorrelation = cv.getAvgCorrelation();
 		//cout << cv.pointsList.size() << " " << cv.clusterHead << " - MaxCorrelation: " << actMaxCorrelation << " - AvgCorrelation: " << actAvgCorrelation << " - Moran's I: " << cv.getMoransI() << endl;
-		cout << cv.pointsList.size() << " " << cv.clusterHead << " - Moran's I: " << cv.getMoransI() << " - MAX corr: " << cv.getMaxCorrelation() << endl;
+		cout << "[" << cv.clusterID << "] "<< cv.pointsList.size() << " " << cv.clusterHead << " - Moran's I: " << cv.getMoransI() << " - MAX corr: " << cv.getMaxCorrelation() << endl;
 
 		//if (actMaxCorrelation > maxCorrelation) maxCorrelation = actMaxCorrelation;
 		//if (actAvgCorrelation > maxAvgCorrelation) maxAvgCorrelation = actAvgCorrelation;
@@ -648,6 +1291,8 @@ int main(int argc, char **argv) {
 	cout << "Total elements: " << sumElements << endl;
 	cout << "Maximum MAX correlation: " << getSystemMaxCorrelation(clustersVec) << endl;
 	cout << "Maximum AVG correlation: " << getSystemAvgCorrelation(clustersVec) << endl;
+	cout << "END Moran Full: " << calculateFullMoranIndex(clustersVec) << endl;
+	cout << "END Moran Full Const: " << calculateFullMoranIndex_const(clustersVec) << endl;
 
 	if (!dotFileOutput.empty()) {
 		generateDOTfile(dotFileOutput, clustersVec, ((double) scenarioSize)/50.0);

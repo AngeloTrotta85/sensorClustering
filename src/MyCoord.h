@@ -35,7 +35,7 @@
 /* Constant for comparing doubles. Two doubles at most epsilon apart
    are declared equal.*/
 #ifndef EPSILON
-#define EPSILON     0.0001
+#define EPSILON     0.001
 #endif // ifndef EPSILON
 
 #define qNaN        std::numeric_limits<double>::quiet_NaN()
