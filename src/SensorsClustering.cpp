@@ -677,7 +677,7 @@ void k_2MMalgo(std::vector<CoordCluster> &cv, int k, int iterations) {
 		//double actW = getSystemMaxCorrelation(cv);
 		//if (actW == systemW) {
 		if (!movingSomeone) {
-			//cout << "Stopping at the " << round << " iteration" << endl;
+			cout << "Stopping at the " << round << " iteration" << endl;
 			break;
 		}
 		//systemW = actW;
@@ -886,7 +886,7 @@ void k_2MMalgo3(std::vector<CoordCluster> &cv, int k, int iterations) {
 		//double actW = getSystemMaxCorrelation(cv);
 		//if (actW == systemW) {
 		if (!movingSomeone) {
-			//cout << "Stopping at the " << round << " iteration" << endl;
+			cout << "Stopping at the " << round << " iteration" << endl;
 			break;
 		}
 		//systemW = actW;
@@ -1137,6 +1137,152 @@ int numNotEqualized3(std::vector<CoordCluster> &cv) {
 	return ris;
 }
 
+void randomizeClusters(std::vector<CoordCluster> &cv, unsigned int nCluster, unsigned int n4cluster, int remainingP) {
+	for (unsigned int i = 1; i < nCluster; ++i) {
+		for (unsigned int j = 0; j < n4cluster; ++j) {
+
+			unsigned int r = rand() % cv[0].pointsList.size();
+
+			cv[i].pointsList.push_back(MyCoord(cv[0].pointsList[r].x, cv[0].pointsList[r].y));
+
+			cv[0].pointsList.erase (cv[0].pointsList.begin()+r);
+		}
+	}
+}
+
+bool isBetterChange(double corr2beat, std::vector<MyCoord>::iterator &itP1, std::vector<MyCoord> &pl1, std::vector<MyCoord>::iterator &itP2, std::vector<MyCoord> &pl2) {
+	bool ris = false;
+
+	double corr1Here, corr1There, corr2Here, corr2There;
+
+	corr1Here = corr1There = corr2Here = corr2There = 0;
+
+	for (auto it = pl1.begin(); it != pl1.end(); it++) {
+		if (it != itP1) {
+			double corr1 = weightFunciont(*itP1, *it);
+			if (corr1 > corr1Here) {
+				corr1Here = corr1;
+			}
+
+			double corr2 = weightFunciont(*itP2, *it);
+			if (corr2 > corr2There) {
+				corr2There = corr2;
+			}
+		}
+	}
+
+	for (auto it = pl2.begin(); it != pl2.end(); it++) {
+		if (it != itP2) {
+			double corr2 = weightFunciont(*itP2, *it);
+			if (corr2 > corr2Here) {
+				corr2Here = corr2;
+			}
+
+			double corr1 = weightFunciont(*itP1, *it);
+			if (corr1 > corr1There) {
+				corr1There = corr1;
+			}
+		}
+	}
+
+	if ( (corr1There < corr2beat) && (corr2There < corr2beat) ) {
+		ris = true;
+	}
+
+	return ris;
+}
+
+void makeSwaps(std::vector<CoordCluster> &cv, unsigned int k) {
+
+	bool madeSwap;
+
+	do {
+		unsigned int worstCluster;
+		double corrMax = 0;
+		std::vector<MyCoord>::iterator itMinSrc1, itMinSrc2;
+
+		madeSwap = false;
+
+		/*
+		 * for (unsigned int idx1 = 0; idx1 < cv.size(); idx1++) {
+			if (((int) cv[idx1].pointsList.size()) < n4cluster) {
+				for (unsigned int idx2 = 0; idx2 < cv.size(); idx2++) {
+					if (idx1 != idx2) {
+						if (((int) cv[idx2].pointsList.size()) > n4cluster) {
+							for (auto itP2 = cv[idx2].pointsList.begin(); itP2 != cv[idx2].pointsList.end(); itP2++) {
+								//for (auto& pp : cv[idx2].pointsList) {
+								for (auto itP1 = cv[idx1].pointsList.begin(); itP1 != cv[idx1].pointsList.end(); itP1++) {
+									double corr = weightFunciont(*itP1, *itP2);
+		 */
+
+		for (unsigned int idx1 = 0; idx1 < cv.size(); idx1++) {
+			for (auto itP1 = cv[idx1].pointsList.begin(); itP1 != cv[idx1].pointsList.end(); itP1++) {
+				for (auto itP2 = cv[idx1].pointsList.begin(); itP2 != cv[idx1].pointsList.end(); itP2++) {
+					if (itP1 != itP2) {
+						double corr = weightFunciont(*itP1, *itP2);
+
+						//cout << "Check correlation: " << corr << endl;
+
+						if (corr > corrMax) {
+							corrMax = corr;
+
+							itMinSrc1 = itP1;
+							itMinSrc2 = itP2;
+							worstCluster = idx1;
+						}
+					}
+				}
+			}
+		}
+
+		//cout << "Worst correlation: [" << itMinSrc1->info() << "] - ["
+		//		<< itMinSrc2->info() << "] in cluster "  << worstCluster << endl;
+
+		for (unsigned int idx1 = 0; idx1 < cv.size(); idx1++) {
+			if (idx1 != worstCluster) {
+
+				for (auto itP1 = cv[idx1].pointsList.begin(); itP1 != cv[idx1].pointsList.end(); itP1++) {
+					if (isBetterChange(corrMax, itP1, cv[idx1].pointsList, itMinSrc1, cv[worstCluster].pointsList)) {
+
+						MyCoord newCoordInHere = MyCoord(itMinSrc1->x, itMinSrc1->y);
+						MyCoord newCoordInWorse = MyCoord(itP1->x, itP1->y);
+
+						cv[worstCluster].pointsList.erase (itMinSrc1);
+						cv[idx1].pointsList.erase (itP1);
+
+						cv[idx1].pointsList.push_back(newCoordInHere);
+						cv[worstCluster].pointsList.push_back(newCoordInWorse);
+
+						//cout << "Making swap" << endl;
+
+						madeSwap = true;
+						break;
+
+					} else if (isBetterChange(corrMax, itP1, cv[idx1].pointsList, itMinSrc2, cv[worstCluster].pointsList)) {
+
+						MyCoord newCoordInHere = MyCoord(itMinSrc2->x, itMinSrc2->y);
+						MyCoord newCoordInWorse = MyCoord(itP1->x, itP1->y);
+
+						cv[worstCluster].pointsList.erase (itMinSrc2);
+						cv[idx1].pointsList.erase (itP1);
+
+						cv[idx1].pointsList.push_back(newCoordInHere);
+						cv[worstCluster].pointsList.push_back(newCoordInWorse);
+
+						//cout << "Making swap" << endl;
+
+						madeSwap = true;
+						break;
+					}
+				}
+			}
+
+			if (madeSwap) break;
+		}
+
+	} while (madeSwap);
+}
+
 int main(int argc, char **argv) {
 	std::list<MyCoord> pointsList;
 	std::vector<CoordCluster> clustersVec;
@@ -1209,8 +1355,8 @@ int main(int argc, char **argv) {
 
 	if (!equalizeType.empty()) {
 		equalize_t = atoi(equalizeType.c_str());
-		if ((equalize_t < 1) || (equalize_t > 3)) {
-			cerr << "Wrong equalyze type [1..3]" << endl;
+		if ((equalize_t < 1) || (equalize_t > 4)) {
+			cerr << "Wrong equalyze type [1..4]" << endl;
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -1272,6 +1418,16 @@ int main(int argc, char **argv) {
 				break;
 			}
 		} while (true);
+	}
+	else if (equalize_t == 4) {
+		// new algorithm
+		unsigned int n4cluster = ((unsigned int) pointsList.size()) / k;
+		int remainingP = ((int) pointsList.size()) % k;
+
+		// randomize the input in the clusters
+		randomizeClusters(clustersVec, k, n4cluster, remainingP);
+
+		makeSwaps(clustersVec, k);
 	}
 
 	int sumElements = 0;
