@@ -1290,6 +1290,7 @@ int main(int argc, char **argv) {
 	int scenarioSize = 100;
 	int iterationNum = 10;
 	int equalize_t = 1;
+	int lam = 1;
 
 	cout << "Begin!!!" << endl;
 
@@ -1306,6 +1307,7 @@ int main(int argc, char **argv) {
 	const std::string &iterationNumber = input.getCmdOption("-i");
 	const std::string &equalizeType = input.getCmdOption("-e");
 	const std::string &randomGenerationType = input.getCmdOption("-r");
+	const std::string &lambdaInput = input.getCmdOption("-l");
 
 	if (!iterationNumber.empty()) {
 		iterationNum = atoi(iterationNumber.c_str());
@@ -1315,6 +1317,14 @@ int main(int argc, char **argv) {
 	}
 	if (!kValue.empty()) {
 		k = atoi(kValue.c_str());
+	}
+
+	if (!lambdaInput.empty()) {
+		lam = atoi(lambdaInput.c_str());
+	}
+	else {
+		cerr << "Insert the lambda value -l" << endl;
+		exit(EXIT_FAILURE);
 	}
 
 	if ( (!outputGenerateFileName.empty()) && (!numberOfItemToGenerate.empty()) ) {
@@ -1361,7 +1371,11 @@ int main(int argc, char **argv) {
 		}
 	}
 
+	k = pointsList.size() / lam;
+
 	clustersVec.resize(k);
+
+	cout << "Scenario with " << pointsList.size() << " sensors.  Making " << k << " cluster having lambda = " << lam << endl;
 
 	/*for (auto& cv : clustersVec) {
 		cout << cv.pointsList.size() << " " << cv.clusterHead
@@ -1421,8 +1435,8 @@ int main(int argc, char **argv) {
 	}
 	else if (equalize_t == 4) {
 		// new algorithm
-		unsigned int n4cluster = ((unsigned int) pointsList.size()) / k;
-		int remainingP = ((int) pointsList.size()) % k;
+		unsigned int n4cluster = lam;
+		int remainingP = ((int) pointsList.size()) % lam;
 
 		// randomize the input in the clusters
 		randomizeClusters(clustersVec, k, n4cluster, remainingP);
@@ -1445,7 +1459,7 @@ int main(int argc, char **argv) {
 		sumElements += cv.pointsList.size();
 	}
 	cout << "Total elements: " << sumElements << endl;
-	cout << "Maximum MAX correlation: " << getSystemMaxCorrelation(clustersVec) << endl;
+	cout << "Maximum MAX correlation: " << getSystemMaxCorrelation(clustersVec) << " cioè " << 1.0 / getSystemMaxCorrelation(clustersVec) << " metri" << endl;
 	cout << "Maximum AVG correlation: " << getSystemAvgCorrelation(clustersVec) << endl;
 	cout << "END Moran Full: " << calculateFullMoranIndex(clustersVec) << endl;
 	cout << "END Moran Full Const: " << calculateFullMoranIndex_const(clustersVec) << endl;
