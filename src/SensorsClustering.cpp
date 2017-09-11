@@ -1185,6 +1185,8 @@ bool isBetterChange(double corr2beat, std::vector<MyCoord>::iterator &itP1, std:
 		}
 	}
 
+	//if (corr1There < corr2beat) {
+	//if (corr2There < corr2beat) {
 	if ( (corr1There < corr2beat) && (corr2There < corr2beat) ) {
 		ris = true;
 	}
@@ -1194,6 +1196,7 @@ bool isBetterChange(double corr2beat, std::vector<MyCoord>::iterator &itP1, std:
 
 void makeSwaps(std::vector<CoordCluster> &cv, unsigned int k) {
 
+	int swapNumber = 0;
 	bool madeSwap;
 
 	do {
@@ -1256,6 +1259,7 @@ void makeSwaps(std::vector<CoordCluster> &cv, unsigned int k) {
 						//cout << "Making swap" << endl;
 
 						madeSwap = true;
+						++swapNumber;
 						break;
 
 					} else if (isBetterChange(corrMax, itP1, cv[idx1].pointsList, itMinSrc2, cv[worstCluster].pointsList)) {
@@ -1272,6 +1276,7 @@ void makeSwaps(std::vector<CoordCluster> &cv, unsigned int k) {
 						//cout << "Making swap" << endl;
 
 						madeSwap = true;
+						++swapNumber;
 						break;
 					}
 				}
@@ -1281,6 +1286,183 @@ void makeSwaps(std::vector<CoordCluster> &cv, unsigned int k) {
 		}
 
 	} while (madeSwap);
+
+	cout << "Total swaps: " << swapNumber << endl;
+}
+
+void optAlgo(std::list<MyCoord> &pl, std::vector<CoordCluster> &cv, unsigned int n4cPlus, unsigned int n4c, unsigned int k) {
+	std::vector<unsigned int> idxs(pl.size(), 0);
+	std::vector<unsigned int> checkVec(k, 0);
+	//bool finish = false;
+	//unsigned int nRounds = pow((double)pl.size(), (double)k);
+	unsigned long long int nRounds = pow((double)k, (double)pl.size());
+	double bestCorr = std::numeric_limits<double>::max();
+	std::vector<CoordCluster> bestCombination;
+	bestCombination.resize(k);
+
+	checkVec[0] = pl.size();
+
+	cout << "Start opt algorithm with " << k << "^" << pl.size() << " = " << nRounds << " operations" << endl;
+
+	for (unsigned long long int nr = 0; nr < nRounds; ++nr) {
+	//do {
+		fprintf(stdout, "Optimal algorithm %lf%%\r", (((double) (nr + 1)) / ((double) nRounds)) * 100.0);// fflush(stdout);
+
+		bool formationOK = true;
+		for (unsigned int i_check = 0; i_check < k; ++i_check){
+			if (	((i_check == 0) && (checkVec[i_check] != n4cPlus)) ||
+					((i_check > 0) && (checkVec[i_check] != n4c)) ) {
+				formationOK = false;
+				break;
+			}
+		}
+
+		if(formationOK) {
+			for (auto& cc : cv) {
+				cc.pointsList.clear();
+			}
+			unsigned int idxPL = 0;
+			for (auto& p : pl) {
+				MyCoord newPos = MyCoord(p.x, p.y);
+				cv[idxs[idxPL]].pointsList.push_back(newPos);
+				++idxPL;
+			}
+
+			double worstCorr = 0;
+			for (auto& cc : cv) {
+				double actCorr = cc.getMaxCorrelation();
+				if (actCorr > worstCorr) {
+					worstCorr = actCorr;
+				}
+			}
+			if (worstCorr < bestCorr) {
+				bestCorr = worstCorr;
+
+				for (auto& cc : bestCombination) {
+					cc.pointsList.clear();
+				}
+				std::vector<CoordCluster>::iterator itcBest = bestCombination.begin();
+				for (std::vector<CoordCluster>::iterator itc = cv.begin(); itc != cv.end(); itc++) {
+
+					for (auto& pp : itc->pointsList) {
+						MyCoord newPos = MyCoord(pp.x, pp.y);
+						itcBest->pointsList.push_back(newPos);
+					}
+					itcBest->clusterID = itc->clusterID;
+
+					++itcBest;
+				}
+			}
+		}
+
+
+		/*
+		for (auto& cc : cv) {
+			cc.pointsList.clear();
+		}
+		unsigned int idxPL = 0;
+		for (auto& p : pl) {
+			MyCoord newPos = MyCoord(p.x, p.y);
+			cv[idxs[idxPL]].pointsList.push_back(newPos);
+			++idxPL;
+		}
+
+
+
+		// check formation
+		//bool formationOK = true;
+		for (unsigned iform = 0; iform < cv.size(); ++iform){
+
+			if (	((iform == 0) && (cv[iform].pointsList.size() != n4cPlus)) ||
+					((iform > 0) && (cv[iform].pointsList.size() != n4c)) ) {
+				formationOK = false;
+				break;
+			}
+		}
+		if(formationOK) {
+			double worstCorr = 0;
+			for (auto& cc : cv) {
+				double actCorr = cc.getMaxCorrelation();
+				if (actCorr > worstCorr) {
+					worstCorr = actCorr;
+				}
+			}
+			if (worstCorr < bestCorr) {
+				bestCorr = worstCorr;
+
+				for (auto& cc : bestCombination) {
+					cc.pointsList.clear();
+				}
+				std::vector<CoordCluster>::iterator itcBest = bestCombination.begin();
+				for (std::vector<CoordCluster>::iterator itc = cv.begin(); itc != cv.end(); itc++) {
+
+					for (auto& pp : itc->pointsList) {
+						MyCoord newPos = MyCoord(pp.x, pp.y);
+						itcBest->pointsList.push_back(newPos);
+					}
+					itcBest->clusterID = itc->clusterID;
+
+					++itcBest;
+				}
+			}
+		}
+		*/
+
+
+
+		//increase the idxs counter
+		for (unsigned int idxCheck = 0; idxCheck < pl.size(); ++idxCheck) {
+
+			--checkVec[idxs[idxCheck]];
+			++idxs[idxCheck];
+			if (idxs[idxCheck] < k) {
+				++checkVec[idxs[idxCheck]];
+				break;
+			}
+			else {
+				idxs[idxCheck] = 0;
+				++checkVec[idxs[idxCheck]];
+			}
+		}
+
+		//cout << "Vector clusters: ";
+		//for (auto& ii : checkVec) {
+		//	cout << ii << " ";
+		//}
+		//cout << endl;
+		//cout << "Vector points: ";
+		//for (auto& ii : idxs) {
+		//	cout << ii << " ";
+		//}
+		//cout << endl << endl;
+
+		// check if every combination is done
+		//finish = true;
+		//for (auto& idd : idxs) {
+		//	if (idd < (k-1)) {
+		//		finish = false;
+		//		break;
+		//	}
+		//}
+	//} while (finish);
+	}
+
+	for (auto& cc : cv) {
+		cc.pointsList.clear();
+	}
+	std::vector<CoordCluster>::iterator itc = cv.begin();
+	for (std::vector<CoordCluster>::iterator itcBest = bestCombination.begin(); itcBest != bestCombination.end(); itcBest++) {
+
+		for (auto& pp : itcBest->pointsList) {
+			MyCoord newPos = MyCoord(pp.x, pp.y);
+			itc->pointsList.push_back(newPos);
+		}
+		itc->clusterID = itcBest->clusterID;
+
+		++itc;
+	}
+
+	cout << endl;
 }
 
 int main(int argc, char **argv) {
@@ -1365,8 +1547,8 @@ int main(int argc, char **argv) {
 
 	if (!equalizeType.empty()) {
 		equalize_t = atoi(equalizeType.c_str());
-		if ((equalize_t < 1) || (equalize_t > 4)) {
-			cerr << "Wrong equalyze type [1..4]" << endl;
+		if ((equalize_t < 1) || (equalize_t > 5)) {
+			cerr << "Wrong equalyze type [1..5]" << endl;
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -1443,6 +1625,15 @@ int main(int argc, char **argv) {
 
 		makeSwaps(clustersVec, k);
 	}
+	else if (equalize_t == 5) {
+		// opt algorithm
+		unsigned int n4cluster = lam;
+		unsigned int remainingP = ((int) pointsList.size()) % lam;
+		unsigned int n4clusterPlus = lam + remainingP;
+
+		optAlgo(pointsList, clustersVec, n4clusterPlus, n4cluster, k);
+
+	}
 
 	int sumElements = 0;
 	//double maxCorrelation = 0;
@@ -1459,7 +1650,7 @@ int main(int argc, char **argv) {
 		sumElements += cv.pointsList.size();
 	}
 	cout << "Total elements: " << sumElements << endl;
-	cout << "Maximum MAX correlation: " << getSystemMaxCorrelation(clustersVec) << " cioè " << 1.0 / getSystemMaxCorrelation(clustersVec) << " metri" << endl;
+	cout << "Maximum MAX correlation in " << inputFileName << " is: " << getSystemMaxCorrelation(clustersVec) << " cioè " << 1.0 / getSystemMaxCorrelation(clustersVec) << " metri" << endl;
 	cout << "Maximum AVG correlation: " << getSystemAvgCorrelation(clustersVec) << endl;
 	cout << "END Moran Full: " << calculateFullMoranIndex(clustersVec) << endl;
 	cout << "END Moran Full Const: " << calculateFullMoranIndex_const(clustersVec) << endl;
