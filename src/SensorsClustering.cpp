@@ -17,6 +17,7 @@
 #include <ctime>
 
 #include <boost/range/irange.hpp>
+#include <boost/math/special_functions/factorials.hpp>
 #include "MyCoord.h"
 
 #define ALGOVERSION 0
@@ -52,6 +53,26 @@ double weightFunciont (MyCoord p1, MyCoord p2) {
 
 	return ris;
 }
+
+
+
+class ExtCoord : public MyCoord {
+public:
+	int clustBelonging;
+	std::list<ExtCoord *> toAvoid;
+};
+
+class NodeArc {
+public:
+	static bool compare(const NodeArc& first, const NodeArc& second) {
+		return (first.w > second.w);
+	}
+
+public:
+	ExtCoord *p1;
+	ExtCoord *p2;
+	double w;
+};
 
 class InputParser{
 public:
@@ -1296,6 +1317,7 @@ void optAlgo(std::list<MyCoord> &pl, std::vector<CoordCluster> &cv, unsigned int
 	//bool finish = false;
 	//unsigned int nRounds = pow((double)pl.size(), (double)k);
 	unsigned long long int nRounds = pow((double)k, (double)pl.size());
+	unsigned long long int nRealTest = 0;
 	double bestCorr = std::numeric_limits<double>::max();
 	std::vector<CoordCluster> bestCombination;
 	bestCombination.resize(k);
@@ -1303,6 +1325,7 @@ void optAlgo(std::list<MyCoord> &pl, std::vector<CoordCluster> &cv, unsigned int
 	checkVec[0] = pl.size();
 
 	cout << "Start opt algorithm with " << k << "^" << pl.size() << " = " << nRounds << " operations" << endl;
+	cout << "Opt algorithm with factorial " << boost::math::factorial<long double>((long double)pl.size())  << endl;
 
 	for (unsigned long long int nr = 0; nr < nRounds; ++nr) {
 	//do {
@@ -1318,6 +1341,7 @@ void optAlgo(std::list<MyCoord> &pl, std::vector<CoordCluster> &cv, unsigned int
 		}
 
 		if(formationOK) {
+			++nRealTest;
 			for (auto& cc : cv) {
 				cc.pointsList.clear();
 			}
@@ -1463,6 +1487,197 @@ void optAlgo(std::list<MyCoord> &pl, std::vector<CoordCluster> &cv, unsigned int
 	}
 
 	cout << endl;
+	cout << "Opt algo end. Total tests: " << nRounds << ". Total real tests: " << nRealTest << " (" <<
+			(((long double) nRealTest)/((long double)nRounds)) * 100.0 << "%)" << endl;
+}
+
+void optGoWorst(std::list<MyCoord> &pl, std::vector<CoordCluster> &cv, unsigned int n4cPlus, unsigned int n4c, unsigned int k) {
+	std::list<NodeArc> arcs;
+	std::list<ExtCoord> ecl;
+
+	for (auto& cc : cv) {
+		cc.pointsList.clear();
+	}
+	for (std::list<MyCoord>::iterator itP = pl.begin(); itP != pl.end(); ++itP) {
+		ExtCoord ec;
+		ec.x = itP->x;
+		ec.y = itP->y;
+		ec.clustBelonging = -1;
+		ecl.push_back(ec);
+	}
+
+	for (std::list<ExtCoord>::iterator itP1 = ecl.begin(); itP1 != ecl.end(); ++itP1) {
+		for (std::list<ExtCoord>::iterator itP2 = itP1; itP2 != ecl.end(); ++itP2) {
+			if (itP1 != itP2) {
+				NodeArc na;
+				na.p1 = &(*itP1);
+				na.p2 = &(*itP2);
+				na.w = weightFunciont(*itP1, *itP2);
+				arcs.push_back(na);
+			}
+		}
+	}
+
+	arcs.sort(NodeArc::compare);
+
+	unsigned int cPrint = 0;
+	for (std::list<NodeArc>::iterator itNA = arcs.begin(); itNA != arcs.end(); ++itNA) {
+		cout << "Arco " << ++cPrint << " " << *(itNA->p1) << " - " <<  *(itNA->p2) << " --> " << itNA->w << " (" << 1.0/itNA->w  << ")m" << endl;
+	}
+
+	unsigned int clIdx = 0;
+	for (std::list<NodeArc>::iterator itNA = arcs.begin(); itNA != arcs.end(); ++itNA) {
+
+		if ((itNA->p1->clustBelonging < 0) && (itNA->p2->clustBelonging < 0)) {
+			MyCoord nc1 = MyCoord(itNA->p1->x, itNA->p1->y);
+			itNA->p1->clustBelonging = clIdx;
+			cv[clIdx].pointsList.push_back(nc1);
+			itNA->p1->toAvoid.push_back(itNA->p2);
+			clIdx = (clIdx + 1) % k;
+
+			MyCoord nc2 = MyCoord(itNA->p2->x, itNA->p2->y);
+			itNA->p2->clustBelonging = clIdx;
+			cv[clIdx].pointsList.push_back(nc2);
+			itNA->p2->toAvoid.push_back(itNA->p1);
+			clIdx = (clIdx + 1) % k;
+		}
+		else if ((itNA->p1->clustBelonging >= 0) && (itNA->p2->clustBelonging >= 0)) {
+			// try to move someone
+			itNA->p1->toAvoid.push_back(itNA->p2);
+			itNA->p2->toAvoid.push_back(itNA->p1);
+
+			if (itNA->p1->clustBelonging == itNA->p2->clustBelonging) {
+
+				int idx1 = (itNA->p1->clustBelonging + 1) % k;
+				while (idx1 != itNA->p1->clustBelonging) {
+					bool hereOk = true;
+					for (auto& pp : ecl) {
+						if (pp.clustBelonging == idx1) {
+							for (auto& toa : itNA->p1->toAvoid) {
+								if ((*toa) == (pp)) {
+									hereOk = false;
+									break;
+								}
+							}
+						}
+						if (!hereOk) break;
+					}
+
+					if (hereOk) {
+
+						for (std::vector<MyCoord>::iterator itt1 = cv[itNA->p1->clustBelonging].pointsList.begin(); itt1 != cv[itNA->p1->clustBelonging].pointsList.end(); ++itt1) {
+							if ((*itt1) == (*(itNA->p1))) {
+								cv[itNA->p1->clustBelonging].pointsList.erase(itt1);
+								break;
+							}
+						}
+
+						MyCoord nc = MyCoord(itNA->p1->x, itNA->p1->y);
+						itNA->p1->clustBelonging = idx1;
+						cv[idx1].pointsList.push_back(nc);
+
+						break;
+					}
+
+					idx1 = (idx1 + 1) % k;
+				}
+
+				if (idx1 == itNA->p1->clustBelonging) {
+
+					int idx2 = (itNA->p2->clustBelonging + 1) % k;
+					while (idx2 != itNA->p2->clustBelonging) {
+						bool hereOk = true;
+						for (auto& pp : ecl) {
+							if (pp.clustBelonging == idx2) {
+								for (auto& toa : itNA->p2->toAvoid) {
+									if ((*toa) == (pp)) {
+										hereOk = false;
+										break;
+									}
+								}
+							}
+							if (!hereOk) break;
+						}
+
+						if (hereOk) {
+
+							for (std::vector<MyCoord>::iterator itt2 = cv[itNA->p2->clustBelonging].pointsList.begin(); itt2 != cv[itNA->p2->clustBelonging].pointsList.end(); ++itt2) {
+								if ((*itt2) == (*(itNA->p2))) {
+									cv[itNA->p2->clustBelonging].pointsList.erase(itt2);
+									break;
+								}
+							}
+
+							MyCoord nc = MyCoord(itNA->p2->x, itNA->p2->y);
+							itNA->p2->clustBelonging = idx2;
+							cv[idx2].pointsList.push_back(nc);
+
+							break;
+						}
+
+						idx2 = (idx2 + 1) % k;
+					}
+
+				}
+			}
+		}
+		else {
+			if (itNA->p1->clustBelonging < 0) {
+				MyCoord nc1 = MyCoord(itNA->p1->x, itNA->p1->y);
+
+				if ((int)clIdx == itNA->p2->clustBelonging) {
+					clIdx = (clIdx + 1) % k;
+				}
+
+				cv[clIdx].pointsList.push_back(nc1);
+				itNA->p1->clustBelonging = clIdx;
+
+				itNA->p1->toAvoid.push_back(itNA->p2);
+				itNA->p2->toAvoid.push_back(itNA->p1);
+
+				clIdx = (clIdx + 1) % k;
+			}
+			else {
+				MyCoord nc2 = MyCoord(itNA->p2->x, itNA->p2->y);
+
+				if ((int)clIdx == itNA->p1->clustBelonging) {
+					clIdx = (clIdx + 1) % k;
+				}
+
+				cv[clIdx].pointsList.push_back(nc2);
+				itNA->p2->clustBelonging = clIdx;
+
+				itNA->p2->toAvoid.push_back(itNA->p1);
+				itNA->p1->toAvoid.push_back(itNA->p2);
+
+				clIdx = (clIdx + 1) % k;
+			}
+		}
+
+
+		/*if (itNA->p1->clustBelonging < 0) {
+			MyCoord nc = MyCoord(itNA->p1->x, itNA->p1->y);
+			itNA->p1->clustBelonging = clIdx;
+			cv[clIdx].pointsList.push_back(nc);
+			clIdx = (clIdx + 1) % k;
+		}
+
+		if (itNA->p2->clustBelonging < 0) {
+			MyCoord nc = MyCoord(itNA->p2->x, itNA->p2->y);
+			itNA->p2->clustBelonging = clIdx;
+			cv[clIdx].pointsList.push_back(nc);
+			clIdx = (clIdx + 1) % k;
+		}*/
+	}
+
+	cout << "AFTER" << endl;
+	cPrint = 0;
+	for (std::list<NodeArc>::iterator itNA = arcs.begin(); itNA != arcs.end(); ++itNA) {
+		++cPrint;
+		if (itNA->p1->clustBelonging == itNA->p2->clustBelonging) {
+			cout << "Arco " << cPrint << " " << *(itNA->p1) << " - " <<  *(itNA->p2) << " --> " << itNA->w << " (" << 1.0/itNA->w  << ")m" << endl;
+		}
+	}
 }
 
 int main(int argc, char **argv) {
@@ -1547,8 +1762,8 @@ int main(int argc, char **argv) {
 
 	if (!equalizeType.empty()) {
 		equalize_t = atoi(equalizeType.c_str());
-		if ((equalize_t < 1) || (equalize_t > 5)) {
-			cerr << "Wrong equalyze type [1..5]" << endl;
+		if ((equalize_t < 1) || (equalize_t > 6)) {
+			cerr << "Wrong equalyze type [1..6]" << endl;
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -1632,6 +1847,15 @@ int main(int argc, char **argv) {
 		unsigned int n4clusterPlus = lam + remainingP;
 
 		optAlgo(pointsList, clustersVec, n4clusterPlus, n4cluster, k);
+
+	}
+	else if (equalize_t == 6) {
+		// iterate over worst link
+		unsigned int n4cluster = lam;
+		unsigned int remainingP = ((int) pointsList.size()) % lam;
+		unsigned int n4clusterPlus = lam + remainingP;
+
+		optGoWorst(pointsList, clustersVec, n4clusterPlus, n4cluster, k);
 
 	}
 
