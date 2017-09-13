@@ -55,21 +55,28 @@ do
 			echo "$ALGO1CORR" >> "$OUTPUT_DIR/algo1corr_${lambda}_${sensors}.data"
 			echo "$ALGO1DIST" >> "$OUTPUT_DIR/algo1dist_${lambda}_${sensors}.data"
 			#echo "Algo1 corr:$ALGO1CORR dist:$ALGO1DIST"
+						
+			echo -n "OK - Opt... "
+			OPT=`$EXEC -f inputScenario/inputTest.dat -t $MAX_OPT_OP -e 5 -l $lambda | grep StatMaxCorr`
+			OPTCORR=`echo $OPT | awk '{printf $2}'`
+			OPTDIST=`echo $OPT | awk '{printf $3}'`
+			echo "$OPTCORR" >> "$OUTPUT_DIR/optcorr_${lambda}_${sensors}.data"
+			echo "$OPTDIST" >> "$OUTPUT_DIR/optdist_${lambda}_${sensors}.data"
 			
-			EXPECTED_OP=`echo $(( (sensors/lambda) ** sensors ))`
-			if [ $EXPECTED_OP -lt $MAX_OPT_OP ]
-			then
-				echo -n "OK - Opt ($EXPECTED_OP expected operation)... "
-				OPT=`$EXEC -f inputScenario/inputTest.dat -e 5 -l $lambda | grep StatMaxCorr`
-				OPTCORR=`echo $OPT | awk '{printf $2}'`
-				OPTDIST=`echo $OPT | awk '{printf $3}'`
-				echo "$OPTCORR" >> "$OUTPUT_DIR/optcorr_${lambda}_${sensors}.data"
-				echo "$OPTDIST" >> "$OUTPUT_DIR/optdist_${lambda}_${sensors}.data"
-			else
-				echo "0" >> "$OUTPUT_DIR/optcorr_${lambda}_${sensors}.data"
-				echo "0" >> "$OUTPUT_DIR/optdist_${lambda}_${sensors}.data"
-				echo -n "OK - Skipping Opt ($EXPECTED_OP expected operation) "
-			fi
+			#EXPECTED_OP=`echo $(( (sensors/lambda) ** sensors ))`
+			#if [ $EXPECTED_OP -lt $MAX_OPT_OP ]
+			#then
+			#	echo -n "OK - Opt ($EXPECTED_OP expected operation)... "
+			#	OPT=`$EXEC -f inputScenario/inputTest.dat -e 5 -l $lambda | grep StatMaxCorr`
+			#	OPTCORR=`echo $OPT | awk '{printf $2}'`
+			#	OPTDIST=`echo $OPT | awk '{printf $3}'`
+			#	echo "$OPTCORR" >> "$OUTPUT_DIR/optcorr_${lambda}_${sensors}.data"
+			#	echo "$OPTDIST" >> "$OUTPUT_DIR/optdist_${lambda}_${sensors}.data"
+			#else
+			#	echo "0" >> "$OUTPUT_DIR/optcorr_${lambda}_${sensors}.data"
+			#	echo "0" >> "$OUTPUT_DIR/optdist_${lambda}_${sensors}.data"
+			#	echo -n "OK - Skipping Opt ($EXPECTED_OP expected operation) "
+			#fi
 		
 			
 		
