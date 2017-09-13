@@ -2161,8 +2161,8 @@ int main(int argc, char **argv) {
 
 	if (!equalizeType.empty()) {
 		equalize_t = atoi(equalizeType.c_str());
-		if ((equalize_t < 1) || (equalize_t > 6)) {
-			cerr << "Wrong equalyze type [1..6]" << endl;
+		if ((equalize_t < 0) || (equalize_t > 7)) {
+			cerr << "Wrong equalyze type [0..7]" << endl;
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -2188,7 +2188,10 @@ int main(int argc, char **argv) {
 		ccc.clusterID = idd++;
 	}
 
-	if (equalize_t < 3) {
+	if (equalize_t == 0) {
+		exit(EXIT_SUCCESS);
+	}
+	else if (equalize_t < 3) {
 		//cout << "Start k_2MMalgo" << endl; fflush(stdout);
 		k_2MMalgo(clustersVec, k, iterationNum);
 		//cout << "End k_2MMalgo" << endl; fflush(stdout);
@@ -2257,6 +2260,14 @@ int main(int argc, char **argv) {
 		optGoWorst(pointsList, clustersVec, n4clusterPlus, n4cluster, k);
 
 	}
+	else if (equalize_t == 7) {
+		// just random
+		unsigned int n4cluster = lam;
+		int remainingP = ((int) pointsList.size()) % lam;
+
+		// randomize the input in the clusters
+		randomizeClusters(clustersVec, k, n4cluster, remainingP);
+	}
 
 	int sumElements = 0;
 	//double maxCorrelation = 0;
@@ -2265,15 +2276,17 @@ int main(int argc, char **argv) {
 		//double actMaxCorrelation = cv.getMaxCorrelation();
 		//double actAvgCorrelation = cv.getAvgCorrelation();
 		//cout << cv.pointsList.size() << " " << cv.clusterHead << " - MaxCorrelation: " << actMaxCorrelation << " - AvgCorrelation: " << actAvgCorrelation << " - Moran's I: " << cv.getMoransI() << endl;
-		cout << "[" << cv.clusterID << "] "<< cv.pointsList.size() << " " << cv.clusterHead << " - Moran's I: " << cv.getMoransI() << " - MAX corr: " << cv.getMaxCorrelation() << endl;
+		//cout << "[" << cv.clusterID << "] "<< cv.pointsList.size() << " " << cv.clusterHead << " - Moran's I: " << cv.getMoransI() << " - MAX corr: " << cv.getMaxCorrelation() << endl;
 
 		//if (actMaxCorrelation > maxCorrelation) maxCorrelation = actMaxCorrelation;
 		//if (actAvgCorrelation > maxAvgCorrelation) maxAvgCorrelation = actAvgCorrelation;
 
 		sumElements += cv.pointsList.size();
 	}
+	double maxTotalCorr = getSystemMaxCorrelation(clustersVec);
 	cout << "Total elements: " << sumElements << endl;
-	cout << "Maximum MAX correlation in " << inputFileName << " is: " << getSystemMaxCorrelation(clustersVec) << " cioè " << 1.0 / getSystemMaxCorrelation(clustersVec) << " metri" << endl;
+	cout << "Maximum MAX correlation in " << inputFileName << " is: " << maxTotalCorr << " cioè " << 1.0 / maxTotalCorr << " metri" << endl;
+	cout << "StatMaxCorr " << maxTotalCorr << " " << 1.0 / maxTotalCorr << endl;
 	cout << "Maximum AVG correlation: " << getSystemAvgCorrelation(clustersVec) << endl;
 	cout << "END Moran Full: " << calculateFullMoranIndex(clustersVec) << endl;
 	cout << "END Moran Full Const: " << calculateFullMoranIndex_const(clustersVec) << endl;
