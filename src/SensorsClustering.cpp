@@ -2104,6 +2104,7 @@ int main(int argc, char **argv) {
 	const std::string &equalizeType = input.getCmdOption("-e");
 	const std::string &randomGenerationType = input.getCmdOption("-r");
 	const std::string &lambdaInput = input.getCmdOption("-l");
+	const std::string &optAlgoLimitOperations = input.getCmdOption("-t");
 
 	if (!iterationNumber.empty()) {
 		iterationNum = atoi(iterationNumber.c_str());
@@ -2247,6 +2248,19 @@ int main(int argc, char **argv) {
 		unsigned int n4cluster = lam;
 		unsigned int remainingP = ((int) pointsList.size()) % lam;
 		unsigned int n4clusterPlus = lam + remainingP;
+
+		long double nRounds = powl((long double)k, (long double)pointsList.size());
+
+		if (!optAlgoLimitOperations.empty()) {
+			long double nRounds_max;
+			sscanf(optAlgoLimitOperations.c_str(), "%Lf", &nRounds_max);
+
+			if (nRounds > nRounds_max) {
+				cout << "Opt rounds: " << nRounds << " exceed max operation rounds: " << nRounds_max << endl;
+				cout << "StatMaxCorr " << 0 << " " << 0 << endl;
+				exit(EXIT_SUCCESS);
+			}
+		}
 
 		optAlgo(pointsList, clustersVec, n4clusterPlus, n4cluster, k);
 
