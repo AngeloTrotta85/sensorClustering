@@ -1553,7 +1553,7 @@ void optAlgo(std::list<MyCoord> &pl, std::vector<CoordCluster> &cv, unsigned int
 
 	for (unsigned long long int nr = 0; nr < nRounds; ++nr) {
 	//do {
-		fprintf(stdout, "Optimal algorithm %lf%%\r", (((double) (nr + 1)) / ((double) nRounds)) * 100.0);// fflush(stdout);
+		//fprintf(stdout, "Optimal algorithm %lf%%\r", (((double) (nr + 1)) / ((double) nRounds)) * 100.0);// fflush(stdout);
 
 		bool formationOK = true;
 		for (unsigned int i_check = 0; i_check < k; ++i_check){
