@@ -921,6 +921,20 @@ void generateDOTfile(std::string outFileName, std::vector<CoordCluster> &clustVe
 
 	if (fout.is_open()) {
 
+		double maxCorrelation = 0;
+		int maxIdx = 0;
+		for (int i = 0; i < (int) clustVec.size(); i++) {
+		//for (auto& cv : clustVec) {
+			double actMaxCorrelation = clustVec[i].getMaxCorrelation();
+
+			if (actMaxCorrelation > maxCorrelation) {
+				maxCorrelation = actMaxCorrelation;
+				maxIdx = i;
+			}
+
+		}
+		//return maxCorrelation;
+
 		/*for (int i : boost::irange(0,ni)) { // i goes from 0 to (ni-1) inclusive
 			if (i >= 0) {
 				fout << (std::rand() % 10000) << ";" << (std::rand() % 10000) << endl;
@@ -935,6 +949,11 @@ void generateDOTfile(std::string outFileName, std::vector<CoordCluster> &clustVe
 			for (auto& p : clustVec[i].pointsList) {
 				fout << "S" << count << " [shape=\"point\" color=\"" << color << "\" pos=\""
 						<< p.x << "," << p.y << "!\" width=" << pSize << ", height=" << pSize << "]" << endl;
+
+				if (i == maxIdx) {
+					fout << "S" << count << "_rad [shape=\"circle\" color=\"" << "black" << "\" style=\"dotted\" label=\"\" pos=\""
+							<< p.x << "," << p.y << "!\" width=" << (2.0/maxCorrelation) << ", height=" << (2.0/maxCorrelation) << "]" << endl;
+				}
 
 				count++;
 			}
@@ -1215,6 +1234,118 @@ bool isBetterChange(double corr2beat, std::vector<MyCoord>::iterator &itP1, std:
 	return ris;
 }
 
+bool isBetterChange3CW(double corr2beat, std::vector<MyCoord>::iterator &itP1, std::vector<MyCoord> &pl1, std::vector<MyCoord>::iterator &itP2, std::vector<MyCoord> &pl2, std::vector<MyCoord>::iterator &itP3, std::vector<MyCoord> &pl3) {
+	bool ris = false;
+	double corr1Here, corr1There, corr2Here, corr2There, corr3Here, corr3There;
+
+	corr1Here = corr1There = corr2Here = corr2There = corr3Here = corr3There = 0;
+
+	for (auto it = pl1.begin(); it != pl1.end(); it++) {
+		if (it != itP1) {
+			double corr1 = weightFunciont(*itP1, *it);
+			if (corr1 > corr1Here) {
+				corr1Here = corr1;
+			}
+
+			double corr3 = weightFunciont(*itP3, *it);
+			if (corr3 > corr3There) {
+				corr3There = corr3;
+			}
+		}
+	}
+
+	for (auto it = pl2.begin(); it != pl2.end(); it++) {
+		if (it != itP2) {
+			double corr2 = weightFunciont(*itP2, *it);
+			if (corr2 > corr2Here) {
+				corr2Here = corr2;
+			}
+
+			double corr1 = weightFunciont(*itP1, *it);
+			if (corr1 > corr1There) {
+				corr1There = corr1;
+			}
+		}
+	}
+
+	for (auto it = pl3.begin(); it != pl3.end(); it++) {
+		if (it != itP3) {
+			double corr3 = weightFunciont(*itP3, *it);
+			if (corr3 > corr3Here) {
+				corr3Here = corr3;
+			}
+
+			double corr2 = weightFunciont(*itP2, *it);
+			if (corr2 > corr2There) {
+				corr2There = corr2;
+			}
+		}
+	}
+
+
+	if ( (corr1There < corr2beat) && (corr2There < corr2beat) && (corr3There < corr2beat) ) {
+		ris = true;
+	}
+
+	return ris;
+}
+
+bool isBetterChange3CCW(double corr2beat, std::vector<MyCoord>::iterator &itP1, std::vector<MyCoord> &pl1, std::vector<MyCoord>::iterator &itP2, std::vector<MyCoord> &pl2, std::vector<MyCoord>::iterator &itP3, std::vector<MyCoord> &pl3) {
+	bool ris = false;
+	double corr1Here, corr1There, corr2Here, corr2There, corr3Here, corr3There;
+
+	corr1Here = corr1There = corr2Here = corr2There = corr3Here = corr3There = 0;
+
+	for (auto it = pl1.begin(); it != pl1.end(); it++) {
+		if (it != itP1) {
+			double corr1 = weightFunciont(*itP1, *it);
+			if (corr1 > corr1Here) {
+				corr1Here = corr1;
+			}
+
+			double corr2 = weightFunciont(*itP2, *it);
+			if (corr2 > corr2There) {
+				corr2There = corr2;
+			}
+		}
+	}
+
+	for (auto it = pl2.begin(); it != pl2.end(); it++) {
+		if (it != itP2) {
+			double corr2 = weightFunciont(*itP2, *it);
+			if (corr2 > corr2Here) {
+				corr2Here = corr2;
+			}
+
+			double corr3 = weightFunciont(*itP3, *it);
+			if (corr3 > corr3There) {
+				corr3There = corr3;
+			}
+		}
+	}
+
+	for (auto it = pl3.begin(); it != pl3.end(); it++) {
+		if (it != itP3) {
+			double corr3 = weightFunciont(*itP3, *it);
+			if (corr3 > corr3Here) {
+				corr3Here = corr3;
+			}
+
+			double corr1 = weightFunciont(*itP1, *it);
+			if (corr1 > corr1There) {
+				corr1There = corr1;
+			}
+		}
+	}
+
+
+	if ( (corr1There < corr2beat) && (corr2There < corr2beat) && (corr3There < corr2beat) ) {
+		ris = true;
+	}
+
+	return ris;
+}
+
 void makeSwaps(std::vector<CoordCluster> &cv, unsigned int k) {
 
 	int swapNumber = 0;
@@ -1304,6 +1435,99 @@ void makeSwaps(std::vector<CoordCluster> &cv, unsigned int k) {
 			}
 
 			if (madeSwap) break;
+		}
+
+		if (!madeSwap) {
+			//try a triangular swap
+			for (unsigned int idx1 = 0; idx1 < cv.size(); idx1++) {
+				for (unsigned int idx2 = 0; idx2 < cv.size(); idx2++) {
+					if ((idx1 != worstCluster) && (idx2 != worstCluster) && (idx1 != idx2)) {
+
+						for (auto itP1 = cv[idx1].pointsList.begin(); itP1 != cv[idx1].pointsList.end(); itP1++) {
+							for (auto itP2 = cv[idx2].pointsList.begin(); itP2 != cv[idx2].pointsList.end(); itP2++) {
+								// ClockWise p1-p2-Min1 --> Min1-p1-p2
+								// CounterClockWise p1-p2-Min1 --> p2-Min1-p1
+								if (isBetterChange3CW(corrMax, itP1, cv[idx1].pointsList, itP2, cv[idx2].pointsList, itMinSrc1, cv[worstCluster].pointsList)) {
+
+									MyCoord newCoordP1 = MyCoord(itP1->x, itP1->y);
+									MyCoord newCoordP2 = MyCoord(itP2->x, itP2->y);
+									MyCoord newCoordWorse = MyCoord(itMinSrc1->x, itMinSrc1->y);
+
+									cv[worstCluster].pointsList.erase (itMinSrc1);
+									cv[idx1].pointsList.erase (itP1);
+									cv[idx2].pointsList.erase (itP2);
+
+									cv[idx1].pointsList.push_back(newCoordWorse);
+									cv[idx2].pointsList.push_back(newCoordP1);
+									cv[worstCluster].pointsList.push_back(newCoordP2);
+
+									madeSwap = true;
+									cout << "Making CW1 swap" << endl;
+									++swapNumber;
+									break;
+								} else	if (isBetterChange3CCW(corrMax, itP1, cv[idx1].pointsList, itP2, cv[idx2].pointsList, itMinSrc1, cv[worstCluster].pointsList)) {
+
+									MyCoord newCoordP1 = MyCoord(itP1->x, itP1->y);
+									MyCoord newCoordP2 = MyCoord(itP2->x, itP2->y);
+									MyCoord newCoordWorse = MyCoord(itMinSrc1->x, itMinSrc1->y);
+
+									cv[worstCluster].pointsList.erase (itMinSrc1);
+									cv[idx1].pointsList.erase (itP1);
+									cv[idx2].pointsList.erase (itP2);
+
+									cv[idx1].pointsList.push_back(newCoordP2);
+									cv[idx2].pointsList.push_back(newCoordWorse);
+									cv[worstCluster].pointsList.push_back(newCoordP1);
+
+									madeSwap = true;
+									cout << "Making CCW1 swap" << endl;
+									++swapNumber;
+									break;
+								} else if (isBetterChange3CW(corrMax, itP1, cv[idx1].pointsList, itP2, cv[idx2].pointsList, itMinSrc2, cv[worstCluster].pointsList)) {
+
+									MyCoord newCoordP1 = MyCoord(itP1->x, itP1->y);
+									MyCoord newCoordP2 = MyCoord(itP2->x, itP2->y);
+									MyCoord newCoordWorse = MyCoord(itMinSrc2->x, itMinSrc2->y);
+
+									cv[worstCluster].pointsList.erase (itMinSrc2);
+									cv[idx1].pointsList.erase (itP1);
+									cv[idx2].pointsList.erase (itP2);
+
+									cv[idx1].pointsList.push_back(newCoordWorse);
+									cv[idx2].pointsList.push_back(newCoordP1);
+									cv[worstCluster].pointsList.push_back(newCoordP2);
+
+									madeSwap = true;
+									cout << "Making CW2 swap" << endl;
+									++swapNumber;
+									break;
+								} else if (isBetterChange3CCW(corrMax, itP1, cv[idx1].pointsList, itP2, cv[idx2].pointsList, itMinSrc2, cv[worstCluster].pointsList)) {
+
+									MyCoord newCoordP1 = MyCoord(itP1->x, itP1->y);
+									MyCoord newCoordP2 = MyCoord(itP2->x, itP2->y);
+									MyCoord newCoordWorse = MyCoord(itMinSrc2->x, itMinSrc2->y);
+
+									cv[worstCluster].pointsList.erase (itMinSrc2);
+									cv[idx1].pointsList.erase (itP1);
+									cv[idx2].pointsList.erase (itP2);
+
+									cv[idx1].pointsList.push_back(newCoordP2);
+									cv[idx2].pointsList.push_back(newCoordWorse);
+									cv[worstCluster].pointsList.push_back(newCoordP1);
+
+									madeSwap = true;
+									cout << "Making CCW2 swap" << endl;
+									++swapNumber;
+									break;
+								}
+							}
+							if (madeSwap) break;
+						}
+						if (madeSwap) break;
+					}
+				}
+				if (madeSwap) break;
+			}
 		}
 
 	} while (madeSwap);
@@ -1547,49 +1771,17 @@ void optGoWorst(std::list<MyCoord> &pl, std::vector<CoordCluster> &cv, unsigned 
 			itNA->p2->toAvoid.push_back(itNA->p1);
 
 			if (itNA->p1->clustBelonging == itNA->p2->clustBelonging) {
+				bool movedLink, movedOthers;
 
-				int idx1 = (itNA->p1->clustBelonging + 1) % k;
-				while (idx1 != itNA->p1->clustBelonging) {
-					bool hereOk = true;
-					for (auto& pp : ecl) {
-						if (pp.clustBelonging == idx1) {
-							for (auto& toa : itNA->p1->toAvoid) {
-								if ((*toa) == (pp)) {
-									hereOk = false;
-									break;
-								}
-							}
-						}
-						if (!hereOk) break;
-					}
+				do {
+					movedLink = movedOthers = false;
 
-					if (hereOk) {
-
-						for (std::vector<MyCoord>::iterator itt1 = cv[itNA->p1->clustBelonging].pointsList.begin(); itt1 != cv[itNA->p1->clustBelonging].pointsList.end(); ++itt1) {
-							if ((*itt1) == (*(itNA->p1))) {
-								cv[itNA->p1->clustBelonging].pointsList.erase(itt1);
-								break;
-							}
-						}
-
-						MyCoord nc = MyCoord(itNA->p1->x, itNA->p1->y);
-						itNA->p1->clustBelonging = idx1;
-						cv[idx1].pointsList.push_back(nc);
-
-						break;
-					}
-
-					idx1 = (idx1 + 1) % k;
-				}
-
-				if (idx1 == itNA->p1->clustBelonging) {
-
-					int idx2 = (itNA->p2->clustBelonging + 1) % k;
-					while (idx2 != itNA->p2->clustBelonging) {
+					int idx1 = (itNA->p1->clustBelonging + 1) % k;
+					while (idx1 != itNA->p1->clustBelonging) {
 						bool hereOk = true;
 						for (auto& pp : ecl) {
-							if (pp.clustBelonging == idx2) {
-								for (auto& toa : itNA->p2->toAvoid) {
+							if (pp.clustBelonging == idx1) {
+								for (auto& toa : itNA->p1->toAvoid) {
 									if ((*toa) == (pp)) {
 										hereOk = false;
 										break;
@@ -1598,27 +1790,234 @@ void optGoWorst(std::list<MyCoord> &pl, std::vector<CoordCluster> &cv, unsigned 
 							}
 							if (!hereOk) break;
 						}
-
 						if (hereOk) {
-
-							for (std::vector<MyCoord>::iterator itt2 = cv[itNA->p2->clustBelonging].pointsList.begin(); itt2 != cv[itNA->p2->clustBelonging].pointsList.end(); ++itt2) {
-								if ((*itt2) == (*(itNA->p2))) {
-									cv[itNA->p2->clustBelonging].pointsList.erase(itt2);
+							for (std::vector<MyCoord>::iterator itt1 = cv[itNA->p1->clustBelonging].pointsList.begin(); itt1 != cv[itNA->p1->clustBelonging].pointsList.end(); ++itt1) {
+								if ((*itt1) == (*(itNA->p1))) {
+									cv[itNA->p1->clustBelonging].pointsList.erase(itt1);
 									break;
 								}
 							}
-
-							MyCoord nc = MyCoord(itNA->p2->x, itNA->p2->y);
-							itNA->p2->clustBelonging = idx2;
-							cv[idx2].pointsList.push_back(nc);
-
+							MyCoord nc = MyCoord(itNA->p1->x, itNA->p1->y);
+							itNA->p1->clustBelonging = idx1;
+							cv[idx1].pointsList.push_back(nc);
+							movedLink = true;
+							//cout << "Breaking someone 1" << endl;
 							break;
 						}
-
-						idx2 = (idx2 + 1) % k;
+						idx1 = (idx1 + 1) % k;
 					}
 
-				}
+					if (idx1 == itNA->p1->clustBelonging) {
+						int idx2 = (itNA->p2->clustBelonging + 1) % k;
+						while (idx2 != itNA->p2->clustBelonging) {
+							bool hereOk = true;
+							for (auto& pp : ecl) {
+								if (pp.clustBelonging == idx2) {
+									for (auto& toa : itNA->p2->toAvoid) {
+										if ((*toa) == (pp)) {
+											hereOk = false;
+											break;
+										}
+									}
+								}
+								if (!hereOk) break;
+							}
+							if (hereOk) {
+								for (std::vector<MyCoord>::iterator itt2 = cv[itNA->p2->clustBelonging].pointsList.begin(); itt2 != cv[itNA->p2->clustBelonging].pointsList.end(); ++itt2) {
+									if ((*itt2) == (*(itNA->p2))) {
+										cv[itNA->p2->clustBelonging].pointsList.erase(itt2);
+										break;
+									}
+								}
+								MyCoord nc = MyCoord(itNA->p2->x, itNA->p2->y);
+								itNA->p2->clustBelonging = idx2;
+								cv[idx2].pointsList.push_back(nc);
+								movedLink = true;
+								//cout << "Breaking someone 2" << endl;
+								break;
+							}
+							idx2 = (idx2 + 1) % k;
+						}
+					}
+
+					//if (false) {
+					if (!movedLink) {
+						// try to move someone other
+
+						int idx1 = (itNA->p1->clustBelonging + 1) % k;
+						while (idx1 != itNA->p1->clustBelonging) {
+							int p2avoid, p2move;
+							p2avoid = p2move = 0;
+							for (auto& pp : ecl) {
+								if (pp.clustBelonging == idx1) {
+									for (auto& toa : itNA->p1->toAvoid) {
+										if ((*toa) == (pp)) {
+											// move the point 'pp'
+											++p2avoid;
+											int idxPP = (idx1 + 1) % k;
+											while (idxPP != idx1) {
+												bool hereOk = true;
+												for (auto& ppPP : ecl) {
+													if (ppPP.clustBelonging == idxPP) {
+														for (auto& toaPP : pp.toAvoid) {
+															if ((*toaPP) == (ppPP)) {
+																hereOk = false;
+																break;
+															}
+														}
+													}
+													if (!hereOk) break;
+												}
+												if (hereOk) {
+													//cout << "1 - I can move " << pp << " from " << idx1 << " to " << idxPP << endl;
+													++p2move;
+													break;
+												}
+												idxPP = (idxPP + 1) % k;
+											}
+										}
+									}
+								}
+							}
+
+							if (p2move == p2avoid) {
+								//cout << "To move " << p2move << " points 1" << endl;
+								for (auto& pp : ecl) {
+									if (pp.clustBelonging == idx1) {
+										for (auto& toa : itNA->p1->toAvoid) {
+											if ((*toa) == (pp)) {
+												// move the point 'pp'
+												int idxPP = (idx1 + 1) % k;
+												while (idxPP != idx1) {
+													bool hereOk = true;
+													for (auto& ppPP : ecl) {
+														if (ppPP.clustBelonging == idxPP) {
+															for (auto& toaPP : pp.toAvoid) {
+																if ((*toaPP) == (ppPP)) {
+																	hereOk = false;
+																	break;
+																}
+															}
+														}
+														if (!hereOk) break;
+													}
+													if (hereOk) {
+														MyCoord nc = MyCoord(pp.x, pp.y);
+														for (std::vector<MyCoord>::iterator itt1 = cv[pp.clustBelonging].pointsList.begin(); itt1 != cv[pp.clustBelonging].pointsList.end(); ++itt1) {
+															if ((*itt1) == (pp)) {
+																cv[pp.clustBelonging].pointsList.erase(itt1);
+																break;
+															}
+														}
+														pp.clustBelonging = idxPP;
+														cv[idxPP].pointsList.push_back(nc);
+
+														//cout << "Moving someone 1" << endl;
+														break;
+													}
+													idxPP = (idxPP + 1) % k;
+												}
+											}
+										}
+									}
+								}
+								movedOthers = true;
+								break;
+							}
+
+							idx1 = (idx1 + 1) % k;
+						}
+
+						//cout << "Finish check 1. Moved? " << movedOthers << endl;
+
+						if (!movedOthers) {
+							int idx2 = (itNA->p2->clustBelonging + 1) % k;
+							while (idx2 != itNA->p2->clustBelonging) {
+								int p2avoid, p2move;
+								p2avoid = p2move = 0;
+								for (auto& pp : ecl) {
+									if (pp.clustBelonging == idx2) {
+										for (auto& toa : itNA->p2->toAvoid) {
+											if ((*toa) == (pp)) {
+												// move the point 'pp'
+												++p2avoid;
+												int idxPP = (idx2 + 1) % k;
+												while (idxPP != idx2) {
+													bool hereOk = true;
+													for (auto& ppPP : ecl) {
+														if (ppPP.clustBelonging == idxPP) {
+															for (auto& toaPP : pp.toAvoid) {
+																if ((*toaPP) == (ppPP)) {
+																	hereOk = false;
+																	break;
+																}
+															}
+														}
+														if (!hereOk) break;
+													}
+													if (hereOk) {
+														//cout << "2 - I can move " << pp << " from " << idx2 << " to " << idxPP << endl;
+														++p2move;
+														break;
+													}
+													idxPP = (idxPP + 1) % k;
+												}
+											}
+										}
+									}
+								}
+
+								if (p2move == p2avoid) {
+									//cout << "To move " << p2move << " points 2" << endl;
+									for (auto& pp : ecl) {
+										if (pp.clustBelonging == idx2) {
+											for (auto& toa : itNA->p2->toAvoid) {
+												if ((*toa) == (pp)) {
+													// move the point 'pp'
+													int idxPP = (idx2 + 1) % k;
+													while (idxPP != idx2) {
+														bool hereOk = true;
+														for (auto& ppPP : ecl) {
+															if (ppPP.clustBelonging == idxPP) {
+																for (auto& toaPP : pp.toAvoid) {
+																	if ((*toaPP) == (ppPP)) {
+																		hereOk = false;
+																		break;
+																	}
+																}
+															}
+															if (!hereOk) break;
+														}
+														if (hereOk) {
+															MyCoord nc = MyCoord(pp.x, pp.y);
+															for (std::vector<MyCoord>::iterator itt2 = cv[pp.clustBelonging].pointsList.begin(); itt2 != cv[pp.clustBelonging].pointsList.end(); ++itt2) {
+																if ((*itt2) == (pp)) {
+																	cv[pp.clustBelonging].pointsList.erase(itt2);
+																	break;
+																}
+															}
+															pp.clustBelonging = idxPP;
+															cv[idxPP].pointsList.push_back(nc);
+
+															//cout << "Moving someone 2" << endl;
+															break;
+														}
+														idxPP = (idxPP + 1) % k;
+													}
+												}
+											}
+										}
+									}
+									movedOthers = true;
+									break;
+								}
+
+								idx2 = (idx2 + 1) % k;
+							}
+							//cout << "Finish check 2. Moved? " << movedOthers << endl;
+						}
+					}
+				} while ((!movedLink) && (movedOthers));
 			}
 		}
 		else {
