@@ -1092,7 +1092,7 @@ void equalize3(std::vector<CoordCluster> &cv, int pointsNumber, int k, unsigned 
 	//cout << "Equalizing3 the " << k << " clusters; " << n4cluster << " each; remaining points: " << remainingP << endl;
 
 	unsigned int minSize = std::numeric_limits<unsigned int>::max();
-	unsigned int idxActCluster;
+	unsigned int idxActCluster = 0;
 	for (unsigned int idxC = 0; idxC < cv.size(); ++idxC) {
 		if (!cv[idxC].algo3freeze) {
 			if ((cv[idxC].pointsList.size() >= minClusterSize) && (cv[idxC].pointsList.size() < minSize)) {
@@ -1106,7 +1106,7 @@ void equalize3(std::vector<CoordCluster> &cv, int pointsNumber, int k, unsigned 
 		cv[idxActCluster].algo3freeze = true;
 
 		if (minSize > minClusterSize) {
-			unsigned int destClust;
+			unsigned int destClust = 0;
 
 			for (unsigned int idxC = 0; idxC < cv.size(); ++idxC) {
 				if (!cv[idxC].algo3freeze) {
@@ -1352,7 +1352,7 @@ void makeSwaps(std::vector<CoordCluster> &cv, unsigned int k) {
 	bool madeSwap;
 
 	do {
-		unsigned int worstCluster;
+		unsigned int worstCluster = 0;
 		double corrMax = 0;
 		std::vector<MyCoord>::iterator itMinSrc1, itMinSrc2;
 
