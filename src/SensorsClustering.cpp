@@ -2339,8 +2339,6 @@ int main(int argc, char **argv) {
 
 	cout << "Begin!!!" << endl;
 
-	std::srand(std::time(0)); // use current time as seed for random generator
-
 	InputParser input(argc, argv);
 
 	const std::string &inputFileName = input.getCmdOption("-f");
@@ -2354,6 +2352,16 @@ int main(int argc, char **argv) {
 	const std::string &randomGenerationType = input.getCmdOption("-r");
 	const std::string &lambdaInput = input.getCmdOption("-l");
 	const std::string &optAlgoLimitOperations = input.getCmdOption("-t");
+	const std::string &seedMultiplier = input.getCmdOption("-z");
+
+
+	if (!seedMultiplier.empty()) {
+		int seedR = atoi(seedMultiplier.c_str());
+		std::srand(seedR);
+	}
+	else {
+		std::srand(std::time(0)); // use current time as seed for random generator
+	}
 
 	if (!iterationNumber.empty()) {
 		iterationNum = atoi(iterationNumber.c_str());

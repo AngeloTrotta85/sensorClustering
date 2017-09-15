@@ -50,10 +50,14 @@ do
 		#for runs in {1..$N_RUNS}
 		for (( runs=1; runs<=N_RUNS; runs++ ))
 		do
-			$EXEC -f inputScenario/inputTest_l${lambda}_s${sensors}_r${runs}.dat -g inputScenario/inputTest_l${lambda}_s${sensors}_r${runs}.dat -s 200 -e 0 -n $sensors -l 1 &>/dev/null
+			SEED=`echo $(( runs + (lambda * 1000) + (sensors * 100000) ))`
+			#echo "$NOW_T s:$sensors l:$lambda r:$runs  ->  SEED = $SEED"
 		
 			NOW_T=`date +"%F %T"`
-			echo -n "$NOW_T s:$sensors l:$lambda r:$runs  ->  "
+			echo -n "$NOW_T s:$sensors l:$lambda r:$runs SEED:$SEED  ->  "
+			
+			
+			$EXEC -f inputScenario/inputTest_l${lambda}_s${sensors}_r${runs}.dat -g inputScenario/inputTest_l${lambda}_s${sensors}_r${runs}.dat -s 200 -e 0 -n $sensors -l 1 &>/dev/null
 		
 			echo -n "Algo1... "
 			ALGO1=`$EXEC -f inputScenario/inputTest_l${lambda}_s${sensors}_r${runs}.dat -e 4 -l $lambda | grep StatMaxCorr`
