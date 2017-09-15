@@ -57,7 +57,7 @@ do
 			echo -n "$NOW_T s:$sensors l:$lambda r:$runs SEED:$SEED  ->  "
 			
 			
-			$EXEC -f inputScenario/inputTest_l${lambda}_s${sensors}_r${runs}.dat -g inputScenario/inputTest_l${lambda}_s${sensors}_r${runs}.dat -s 200 -e 0 -n $sensors -l 1 &>/dev/null
+			$EXEC -f inputScenario/inputTest_l${lambda}_s${sensors}_r${runs}.dat -g inputScenario/inputTest_l${lambda}_s${sensors}_r${runs}.dat -s 200 -e 0 -n $sensors -z $SEED -l 1 &>/dev/null
 		
 			echo -n "Algo1... "
 			ALGO1=`$EXEC -f inputScenario/inputTest_l${lambda}_s${sensors}_r${runs}.dat -e 4 -l $lambda | grep StatMaxCorr`
