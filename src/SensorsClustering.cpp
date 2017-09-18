@@ -58,8 +58,56 @@ double weightFunciont (MyCoord p1, MyCoord p2) {
 
 class ExtCoord : public MyCoord {
 public:
+	int getMaxKmeansW_idx (void) {
+		int ris = 0;
+		double max = 0;
+		for (unsigned int i = 0; i < kmeans_w.size(); i++) {
+			if (kmeans_w[i] > max){
+				ris = i;
+				max = kmeans_w[i];
+			}
+		}
+		return ris;
+	}
+	int getMinKmeansW_idx (void) {
+		int ris = 0;
+		double min = std::numeric_limits<double>::max();
+		for (unsigned int i = 0; i < kmeans_w.size(); i++) {
+			if (kmeans_w[i] < min){
+				ris = i;
+				min = kmeans_w[i];
+			}
+		}
+		return ris;
+	}
+
+	int getMaxKmeansWorstW_idx (void) {
+		int ris = 0;
+		double max = 0;
+		for (unsigned int i = 0; i < kmeans_worst_w.size(); i++) {
+			if (kmeans_worst_w[i] > max){
+				ris = i;
+				max = kmeans_worst_w[i];
+			}
+		}
+		return ris;
+	}
+	int getMinKmeansWorstW_idx (void) {
+		int ris = 0;
+		double min = std::numeric_limits<double>::max();
+		for (unsigned int i = 0; i < kmeans_worst_w.size(); i++) {
+			if (kmeans_worst_w[i] < min){
+				ris = i;
+				min = kmeans_worst_w[i];
+			}
+		}
+		return ris;
+	}
+public:
 	int clustBelonging;
 	std::list<ExtCoord *> toAvoid;
+	std::vector<double> kmeans_w;
+	std::vector<double> kmeans_worst_w;
 };
 
 class NodeArc {
@@ -219,7 +267,7 @@ public:
 		return ( (pCount / sumW) * (sumUp / sumDown) );
 	}
 
-	void makeClone(int idxClust) {
+	void makeClone(int idxClust, int numClusters) {
 		pointsListClone.clear();
 		pointsListClone.resize(pointsList.size());
 
@@ -228,6 +276,8 @@ public:
 			ec.x = pointsList[i].x;
 			ec.y = pointsList[i].y;
 			ec.clustBelonging = idxClust;
+			ec.kmeans_w.resize(numClusters);
+			ec.kmeans_worst_w.resize(numClusters);
 
 			pointsListClone[i] = ec;
 		}
@@ -2226,6 +2276,52 @@ void updateSetsInverse(std::list<MyCoord> &pl, std::vector<CoordCluster> &cv) {
 	}
 }
 
+void updateSetsInverseWithClone3(std::list<MyCoord> &pl, std::vector<CoordCluster> &cv) {
+	for (auto &cc : cv) {
+		cc.pointsList.clear();
+	}
+
+	for (auto &cc : cv) {
+
+		ExtCoord *wCluster = nullptr;
+		double maxCorr = 0;
+
+		for (auto &pp1 : cc.pointsListClone) {
+			for (auto &pp2 : cc.pointsListClone) {
+				if (pp1 != pp2) {
+					double actCorr = weightFunciont(pp1, pp2);
+					if (actCorr > maxCorr) {
+						maxCorr = actCorr;
+						wCluster = &pp1;
+					}
+				}
+			}
+		}
+
+		for (auto &pp : cc.pointsListClone) {
+			if (wCluster == &pp) {
+				cv[wCluster->getMinKmeansWorstW_idx()].pointsList.push_back(MyCoord(wCluster->x, wCluster->y));
+			}
+			else {
+				cv[pp.clustBelonging].pointsList.push_back(pp);
+			}
+		}
+	}
+}
+
+void updateSetsInverseWithClone2(std::list<MyCoord> &pl, std::vector<CoordCluster> &cv) {
+	for (auto &cc : cv) {
+		cc.pointsList.clear();
+	}
+
+	for (auto &cc : cv) {
+		for (auto &pp : cc.pointsListClone) {
+
+			cv[pp.getMinKmeansW_idx()].pointsList.push_back(pp);
+		}
+	}
+}
+
 void updateSetsInverseWithClone(std::list<MyCoord> &pl, std::vector<CoordCluster> &cv) {
 	//clear all the clusters
 	for (auto &cc : cv) {
@@ -2300,7 +2396,39 @@ void updateSetsInverseWithClone(std::list<MyCoord> &pl, std::vector<CoordCluster
 void createClusterClone(std::vector<CoordCluster> &cv) {
 	for (unsigned int i = 0; i < cv.size(); i++) {
 	//for (auto &cc : cv) {
-		cv[i].makeClone(i);
+		cv[i].makeClone(i, cv.size());
+	}
+
+	for (unsigned int i = 0; i < cv.size(); i++) {
+		for (auto& pp : cv[i].pointsListClone) {
+
+			for (unsigned int j = 0; j < cv.size(); j++) {
+				double cumCorr = 0;
+				double countW = 0;
+				double worstW = 0;
+
+				for (auto& pp2 : cv[j].pointsListClone) {
+					if (pp2 != pp) {
+						double actCorr = weightFunciont(pp2, pp);
+						cumCorr += actCorr;
+						if (actCorr > worstW) {
+							worstW = actCorr;
+						}
+						++countW;
+					}
+				}
+
+				if (countW == 0) {
+					cumCorr = 0;
+				}
+				else {
+					cumCorr = cumCorr / countW;
+				}
+
+				pp.kmeans_w[j] = cumCorr;
+				pp.kmeans_worst_w[j] = worstW;
+			}
+		}
 	}
 }
 
@@ -2323,7 +2451,8 @@ void kmeans_inverse(std::list<MyCoord> &pl, std::vector<CoordCluster> &cv, int k
 		// update the sets
 		//updateSetsInverse(pl, cv);
 		//cout << "Making iteration " << i << endl;
-		updateSetsInverseWithClone(pl, cv);
+		//updateSetsInverseWithClone2(pl, cv);
+		updateSetsInverseWithClone3(pl, cv);
 	}
 	cout << endl;
 }
@@ -2555,7 +2684,7 @@ int main(int argc, char **argv) {
 
 		kmeans_inverse(pointsList, clustersVec, k, iterationNum, scenarioSize);
 
-		//equalizeOK(clustersVec, pointsList.size(), k, n4clusterPlus, n4cluster);
+		equalizeOK(clustersVec, pointsList.size(), k, n4clusterPlus, n4cluster);
 	}
 
 	int sumElements = 0;

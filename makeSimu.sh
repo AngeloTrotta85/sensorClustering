@@ -56,11 +56,16 @@ do
 			NOW_T=`date +"%F %T"`
 			echo -n "$NOW_T s:$sensors l:$lambda r:$runs SEED:$SEED  ->  "
 			
+			SCENARIO_FN="inputScenario/inputTest_l${lambda}_s${sensors}_r${runs}.dat"
 			
-			$EXEC -f inputScenario/inputTest_l${lambda}_s${sensors}_r${runs}.dat -g inputScenario/inputTest_l${lambda}_s${sensors}_r${runs}.dat -s 200 -e 0 -n $sensors -z $SEED -l 1 &>/dev/null
+			if [ ! -f "$SCENARIO_FN" ]
+			then
+				$EXEC -f ${SCENARIO_FN} -g ${SCENARIO_FN} -s 200 -e 0 -n $sensors -z $SEED -l 1 &>/dev/null
+			fi
+			
 		
 			echo -n "Algo1... "
-			ALGO1=`$EXEC -f inputScenario/inputTest_l${lambda}_s${sensors}_r${runs}.dat -e 4 -l $lambda | grep StatMaxCorr`
+			ALGO1=`$EXEC -f ${SCENARIO_FN} -e 4 -l $lambda | grep StatMaxCorr`
 			ALGO1CORR=`echo $ALGO1 | awk '{printf $2}'`
 			ALGO1DIST=`echo $ALGO1 | awk '{printf $3}'`
 			echo "$ALGO1CORR" >> "$OUTPUT_DIR/algo1corr_${lambda}_${sensors}.data"
@@ -68,7 +73,7 @@ do
 			#echo "Algo1 corr:$ALGO1CORR dist:$ALGO1DIST"
 						
 			echo -n "OK - Opt... "
-			OPT=`$EXEC -f inputScenario/inputTest_l${lambda}_s${sensors}_r${runs}.dat -t $MAX_OPT_OP -e 5 -l $lambda | grep StatMaxCorr`
+			OPT=`$EXEC -f ${SCENARIO_FN} -t $MAX_OPT_OP -e 5 -l $lambda | grep StatMaxCorr`
 			OPTCORR=`echo $OPT | awk '{printf $2}'`
 			OPTDIST=`echo $OPT | awk '{printf $3}'`
 			echo "$OPTCORR" >> "$OUTPUT_DIR/optcorr_${lambda}_${sensors}.data"
@@ -92,7 +97,7 @@ do
 			
 		
 			echo -n "OK - Random... "
-			RAND=`$EXEC -f inputScenario/inputTest_l${lambda}_s${sensors}_r${runs}.dat -e 7 -l $lambda | grep StatMaxCorr`
+			RAND=`$EXEC -f ${SCENARIO_FN} -e 7 -l $lambda | grep StatMaxCorr`
 			RANDCORR=`echo $RAND | awk '{printf $2}'`
 			RANDDIST=`echo $RAND | awk '{printf $3}'`
 			echo "$RANDCORR" >> "$OUTPUT_DIR/randcorr_${lambda}_${sensors}.data"
@@ -100,7 +105,7 @@ do
 			
 		
 			echo -n "OK - Salsiccia... "
-			SALS=`$EXEC -f inputScenario/inputTest_l${lambda}_s${sensors}_r${runs}.dat -e 2 -l $lambda -i 100 | grep StatMaxCorr`
+			SALS=`$EXEC -f ${SCENARIO_FN} -e 2 -l $lambda -i 100 | grep StatMaxCorr`
 			SALSCORR=`echo $SALS | awk '{printf $2}'`
 			SALSDIST=`echo $SALS | awk '{printf $3}'`
 			echo "$SALSCORR" >> "$OUTPUT_DIR/salscorr_${lambda}_${sensors}.data"
