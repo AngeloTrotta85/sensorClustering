@@ -2548,8 +2548,8 @@ int main(int argc, char **argv) {
 
 	if (!equalizeType.empty()) {
 		equalize_t = atoi(equalizeType.c_str());
-		if ((equalize_t < 0) || (equalize_t > 8)) {
-			cerr << "Wrong equalyze type [0..8]" << endl;
+		if ((equalize_t < 0) || (equalize_t > 9)) {
+			cerr << "Wrong equalyze type [0..9]" << endl;
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -2685,6 +2685,43 @@ int main(int argc, char **argv) {
 		kmeans_inverse(pointsList, clustersVec, k, iterationNum, scenarioSize);
 
 		equalizeOK(clustersVec, pointsList.size(), k, n4clusterPlus, n4cluster);
+	}
+	else if (equalize_t == 9) {
+		std::vector<MyCoord> pointsVector;
+		int newK = pointsList.size(); // - lam + 1;
+		clustersVec.resize(newK);
+
+		for (auto& c : clustersVec) {
+			c.pointsList.clear();
+		}
+
+		cout << "Making " << clustersVec.size() << " clusters from " << pointsList.size() << " points and lambda " << lam << endl;
+
+		pointsVector.resize(pointsList.size());
+		int idxP = 0;
+		for (auto& p : pointsList) {
+			pointsVector[idxP++] = MyCoord(p.x, p.y);
+		}
+
+		std::random_shuffle(pointsVector.begin(), pointsVector.end());
+
+		for (idxP = 0; idxP < ((int) pointsVector.size()); ++idxP) {
+
+			for (int l = 0; l < lam; ++l) {
+				int actIdx = (idxP + l) % clustersVec.size();
+				clustersVec[actIdx].pointsList.push_back(MyCoord(pointsVector[idxP].x, pointsVector[idxP].y));
+			}
+
+			/*if (idxP < (((int) pointsVector.size()) - lam)) {
+				clustersVec[idxP].pointsList.push_back(MyCoord(pointsVector[idxP].x, pointsVector[idxP].y));
+			}
+
+			for (int j = (idxP - 1); j > (idxP - lam); j--) {
+				if ((j >= 0) && (j < newK)) {
+					clustersVec[j].pointsList.push_back(MyCoord(pointsVector[idxP].x, pointsVector[idxP].y));
+				}
+			}*/
+		}
 	}
 
 	int sumElements = 0;
