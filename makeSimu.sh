@@ -20,6 +20,9 @@ rm -rf "$OUTPUT_DIR/salscorr_OK_3D.data"
 rm -rf "$OUTPUT_DIR/kmeancorr_OK_3D.data"
 rm -rf "$OUTPUT_DIR/kmeancorr_OK_3D.data"
 
+rm -rf "$OUTPUT_DIR/rrcorr_OK_3D.data"
+rm -rf "$OUTPUT_DIR/rrcorr_OK_3D.data"
+
 
 #for lambda in 3 4 5
 for lambda in {3..25}
@@ -52,6 +55,9 @@ do
 		
 		rm -rf "$OUTPUT_DIR/kmeancorr_${lambda}_${sensors}.data"
 		rm -rf "$OUTPUT_DIR/kmeandist_${lambda}_${sensors}.data"
+		
+		rm -rf "$OUTPUT_DIR/rrcorr_${lambda}_${sensors}.data"
+		rm -rf "$OUTPUT_DIR/rrdist_${lambda}_${sensors}.data"
 		
 		#for runs in {1..$N_RUNS}
 		for (( runs=1; runs<=N_RUNS; runs++ ))
@@ -124,6 +130,15 @@ do
 			KMEANDIST=`echo $KMEAN | awk '{printf $3}'`
 			echo "$KMEANCORR" >> "$OUTPUT_DIR/kmeancorr_${lambda}_${sensors}.data"
 			echo "$KMEANDIST" >> "$OUTPUT_DIR/kmeandist_${lambda}_${sensors}.data"
+			
+			
+			echo -n "OK - roundRobin... "
+			RR=`$EXEC -f ${SCENARIO_FN} -e 9 -l $lambda | grep StatMaxCorr`
+			RRCORR=`echo $RR | awk '{printf $2}'`
+			RRDIST=`echo $RR | awk '{printf $3}'`
+			echo "$RRCORR" >> "$OUTPUT_DIR/rrcorr_${lambda}_${sensors}.data"
+			echo "$RRDIST" >> "$OUTPUT_DIR/rrdist_${lambda}_${sensors}.data"
+			
 		
 			echo "OK"
 		done
@@ -143,6 +158,9 @@ do
 		KMEANCORR_OK=`cat "$OUTPUT_DIR/kmeancorr_${lambda}_${sensors}.data" | awk 'BEGIN{c=0;s=0}{c++;s+=$1}END{print s/c}'`
 		KMEANDIST_OK=`cat "$OUTPUT_DIR/kmeandist_${lambda}_${sensors}.data" | awk 'BEGIN{c=0;s=0}{c++;s+=$1}END{print s/c}'`
 		
+		RRCORR_OK=`cat "$OUTPUT_DIR/rrcorr_${lambda}_${sensors}.data" | awk 'BEGIN{c=0;s=0}{c++;s+=$1}END{print s/c}'`
+		RRDIST_OK=`cat "$OUTPUT_DIR/rrdist_${lambda}_${sensors}.data" | awk 'BEGIN{c=0;s=0}{c++;s+=$1}END{print s/c}'`
+		
 		rm -rf "$OUTPUT_DIR/algo1corr_${lambda}_${sensors}.data"
 		rm -rf "$OUTPUT_DIR/algo1dist_${lambda}_${sensors}.data"
 		
@@ -157,6 +175,9 @@ do
 		
 		rm -rf "$OUTPUT_DIR/kmeancorr_${lambda}_${sensors}.data"
 		rm -rf "$OUTPUT_DIR/kmeandist_${lambda}_${sensors}.data"
+		
+		rm -rf "$OUTPUT_DIR/rrcorr_${lambda}_${sensors}.data"
+		rm -rf "$OUTPUT_DIR/rrdist_${lambda}_${sensors}.data"
 				
 		
 		
@@ -185,6 +206,13 @@ do
 		echo "$lambda $KMEANDIST_OK" >> "$OUTPUT_DIR/kmeandist_OK_s${sensors}.data"
 		echo "$sensors $KMEANDIST_OK" >> "$OUTPUT_DIR/kmeandist_OK_l${lambda}.data"
 		
+		echo "$lambda $RRCORR_OK" >> "$OUTPUT_DIR/rrcorr_OK_s${sensors}.data"
+		echo "$sensors $RRCORR_OK" >> "$OUTPUT_DIR/rrcorr_OK_l${lambda}.data"
+		echo "$lambda $RRDIST_OK" >> "$OUTPUT_DIR/rrdist_OK_s${sensors}.data"
+		echo "$sensors $RRDIST_OK" >> "$OUTPUT_DIR/rrdist_OK_l${lambda}.data"
+		
+		
+		
 		echo "$lambda $sensors $ALGO1CORR_OK" >> "$OUTPUT_DIR/algo1corr_OK_3D.data"
 		echo "$lambda $sensors $ALGO1DIST_OK" >> "$OUTPUT_DIR/algo1dist_OK_3D.data"
 		
@@ -199,6 +227,9 @@ do
 		
 		echo "$lambda $sensors $KMEANCORR_OK" >> "$OUTPUT_DIR/kmeancorr_OK_3D.data"
 		echo "$lambda $sensors $KMEANDIST_OK" >> "$OUTPUT_DIR/kmeandist_OK_3D.data"
+		
+		echo "$lambda $sensors $RRCORR_OK" >> "$OUTPUT_DIR/rrcorr_OK_3D.data"
+		echo "$lambda $sensors $RRDIST_OK" >> "$OUTPUT_DIR/rrdist_OK_3D.data"
 	done
 	
 	echo "" >> "$OUTPUT_DIR/algo1corr_OK_3D.data"
@@ -215,6 +246,9 @@ do
 	
 	echo "" >> "$OUTPUT_DIR/kmeancorr_OK_3D.data"
 	echo "" >> "$OUTPUT_DIR/kmeandist_OK_3D.data"
+	
+	echo "" >> "$OUTPUT_DIR/rrcorr_OK_3D.data"
+	echo "" >> "$OUTPUT_DIR/rrdist_OK_3D.data"
 done
 
 #Release/SensorsClustering -f inputScenario/inputTest.dat -g inputScenario/inputTest.dat -o outputRis/outputTest.dot -s 100 -e 7 -n 1200 -l 33
